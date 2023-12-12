@@ -36,7 +36,6 @@ class WebAutomationTool(QMainWindow):
         style = """
         QWidget {
             background-color: #FFFFFF;
-            font-family: 'Segoe UI', Arial, sans-serif;
             font-size: 12px;
         }
 
@@ -65,10 +64,10 @@ class WebAutomationTool(QMainWindow):
 
         QLineEdit {
             color: #555;
-            border: 1px solid #555;
+            border: 1px solid #ddd;
             padding: 6px;
             border-radius: 4px;
-            background-color: #fff;
+            background-color: #eee;
         }
 
         QLineEdit:focus {
@@ -83,13 +82,13 @@ class WebAutomationTool(QMainWindow):
 
         QComboBox {
             border: 1px solid #ddd;
-            padding: 4px;
+            padding: 10px;
             border-radius: 4px;
-            background-color: #007BFF;
+            background-color: #fff;
+            color: #555;
         }
 
         QComboBox::drop-down {
-            border: 1px solid #ddd;
             background-color: transparent;
         }
 
@@ -98,7 +97,7 @@ class WebAutomationTool(QMainWindow):
         }
 
         QComboBox QAbstractItemView {
-            background-color: #ddd;
+            background-color: #fff;
             color: #555;
         }
 
@@ -106,7 +105,7 @@ class WebAutomationTool(QMainWindow):
             border: 1px solid #ddd;
             border-radius: 4px;
             color: #555;
-            background-color: #black;
+            background-color: #f5f5f5;
         }
 
         QListWidget::item {
@@ -121,7 +120,6 @@ class WebAutomationTool(QMainWindow):
 
         QTextEdit {
             border: 1px solid #ddd;
-            font-family: 'Consolas', 'Courier New', monospace;
             color: #333;
             background-color: #f5f5f5;
         }
@@ -132,7 +130,7 @@ class WebAutomationTool(QMainWindow):
         """
 
         self.setWindowTitle('Atom8 - Advanced Web Automation Tool')
-        self.setGeometry(100, 100, 1200, 800)
+        self.setGeometry(100, 100, 800, 600)
 
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
@@ -143,16 +141,14 @@ class WebAutomationTool(QMainWindow):
         self.setupButtonsAndStepsList(mainLayout)
 
         self.headlessCheckbox = QCheckBox("Headless Mode", self)
-        self.headlessCheckbox.setChecked(False)  # Initially unchecked
+        self.headlessCheckbox.setChecked(False)
         mainLayout.addWidget(self.headlessCheckbox)
         self.headlessCheckbox.setToolTip("Run the browser in the background without GUI")
 
-        # Create a log viewer
         self.logViewer = QTextEdit(self)
         self.logViewer.setReadOnly(True)
         mainLayout.addWidget(self.logViewer)
 
-        # Create a horizontal layout for buttons
         buttonsLayout = QHBoxLayout()
         self.saveLogsButton = QPushButton('Save Logs', self)
         self.saveLogsButton.clicked.connect(self.saveLogs)
@@ -162,7 +158,6 @@ class WebAutomationTool(QMainWindow):
         self.clearLogsButton.clicked.connect(self.clearLogs)
         buttonsLayout.addWidget(self.clearLogsButton)
 
-        # Add buttons layout to the main layout
         mainLayout.addLayout(buttonsLayout)
         self.setStyleSheet(style)
 
@@ -187,27 +182,21 @@ class WebAutomationTool(QMainWindow):
         aboutAction.triggered.connect(self.showAboutDialog)
         helpMenu.addAction(aboutAction)
 
-        # Add a new menu item for clearing the steps list
         clearAction = QAction('Clear', self)
         clearAction.triggered.connect(self.clearStepsList)
         fileMenu.addAction(clearAction)
 
-        # Add a new menu item for exit
         exitAction = QAction('Exit', self)
         exitAction.triggered.connect(self.close)
         fileMenu.addAction(exitAction)
-
-
-
 
     def addStep(self):
         action = self.actionSelection.currentText()
         input_value = self.inputField.text()
         text_value = self.inputText.text()
         description_value = self.inputDescription.text()
-        sleep_value = self.sleepInput.text()  # Get sleep value
+        sleep_value = self.sleepInput.text()
 
-        # Handle adding a Sleep step
         if action == 'Sleep' and sleep_value:
             step = (action, sleep_value, '', description_value)
             self.steps.append(step)
@@ -221,7 +210,7 @@ class WebAutomationTool(QMainWindow):
 
         self.inputField.clear()
         self.inputText.clear()
-        self.sleepInput.clear()  # Clear sleep input field
+        self.sleepInput.clear()
         self.inputDescription.clear()
 
     def setupActionSelection(self, layout):
@@ -240,7 +229,7 @@ class WebAutomationTool(QMainWindow):
         self.inputText = QLineEdit(self)
         self.inputText.setPlaceholderText("Enter Text")
 
-        self.sleepInput = QLineEdit(self)  # Input field for sleep
+        self.sleepInput = QLineEdit(self)
         self.sleepInput.setPlaceholderText("Enter Sleep Time (in seconds)")
 
         self.inputDescription = QLineEdit(self)
@@ -260,21 +249,41 @@ class WebAutomationTool(QMainWindow):
         self.updateFields()
 
     def setupButtonsAndStepsList(self, layout):
-        self.addButton = QPushButton('Add Step', self)
-        self.addButton.clicked.connect(self.addStep)
+        self.editMode = False
+        self.editIndex = None
+        self.addButton = QPushButton('Add/Edit Step', self)
+        self.addButton.clicked.connect(self.addOrEditStep)
 
-        self.removeButton = QPushButton('Remove Selected Step', self)  # New button for removing steps
-        self.removeButton.clicked.connect(self.removeSelectedStep)  # Connect to new method
+        self.removeButton = QPushButton('Remove Selected Step', self)
+        self.removeButton.clicked.connect(self.removeSelectedStep)
+
+        self.editButton = QPushButton('Edit Selected Step', self)
+        self.editButton.clicked.connect(self.editSelectedStep)
+
+        self.saveButton = QPushButton('Save Changes', self)
+        self.saveButton.clicked.connect(self.saveEditedStep)
+
+        self.saveButton.setEnabled(True)
+        self.saveButton.setVisible(False)
 
         self.stepsList = QListWidget(self)
 
         self.startButton = QPushButton('Start Automation', self)
         self.startButton.clicked.connect(self.startAutomation)
 
+        self.moveUpButton = QPushButton('Move Step Up', self)
+        self.moveDownButton = QPushButton('Move Step Down', self)
+        self.moveUpButton.clicked.connect(self.moveStepUp)
+        self.moveDownButton.clicked.connect(self.moveStepDown)
+
         buttonsLayout = QHBoxLayout()
         buttonsLayout.addWidget(self.addButton)
-        buttonsLayout.addWidget(self.removeButton)  # Add remove button to layout
+        buttonsLayout.addWidget(self.editButton)
+        buttonsLayout.addWidget(self.saveButton)
+        buttonsLayout.addWidget(self.removeButton)
         buttonsLayout.addWidget(self.startButton)
+        buttonsLayout.addWidget(self.moveUpButton)
+        buttonsLayout.addWidget(self.moveDownButton)
 
         layout.addLayout(buttonsLayout)
         layout.addWidget(self.stepsList)
@@ -282,39 +291,51 @@ class WebAutomationTool(QMainWindow):
     def removeSelectedStep(self):
         selected_item = self.stepsList.currentRow()
         if selected_item >= 0:
-            self.stepsList.takeItem(selected_item)  # Remove from QListWidget
-            del self.steps[self.stepsList.currentRow()]  # Remove from steps list
+            self.stepsList.takeItem(selected_item)
+            del self.steps[self.stepsList.currentRow()]
         else:
             QMessageBox.warning(self, "No Selection", "Please select a step to remove.")
 
     def updateFields(self):
         action = self.actionSelection.currentText()
 
-        # Initially hide all input fields
         self.inputField.setVisible(False)
         self.inputText.setVisible(False)
         self.sleepInput.setVisible(False)
+        self.inputDescription.setVisible(False)
+        self.inputField.setPlaceholderText("")
+        self.inputText.setPlaceholderText("")
+        self.sleepInput.setPlaceholderText("")
 
-        # Adjust visibility based on the selected action
         if action in ['Navigate to URL', 'Click Element', 'Input Text']:
             self.inputField.setVisible(True)
-
-        if action == 'Input Text':
-            self.inputText.setVisible(True)
+            self.inputDescription.setVisible(True)
+            if action == 'Navigate to URL':
+                self.inputField.setPlaceholderText("Enter URL")
+                self.inputDescription.setVisible(True)
+            elif action == 'Click Element':
+                self.inputField.setPlaceholderText("Enter XPath")
+                self.inputDescription.setVisible(True)
+            elif action == 'Input Text':
+                self.inputField.setPlaceholderText("Enter XPath")
+                self.inputText.setVisible(True)
+                self.inputText.setPlaceholderText("Enter Text")
+                self.inputDescription.setVisible(True)
 
         if action == 'Sleep':
             self.sleepInput.setVisible(True)
+            self.sleepInput.setPlaceholderText("Enter Sleep Time (in seconds)")
+            self.inputDescription.setVisible(True)
 
         if action == 'Execute JavaScript':
             self.inputField.setVisible(True)
             self.inputField.setPlaceholderText("Enter JavaScript")
+            self.inputDescription.setVisible(True)
 
         if action == 'Take Screenshot':
             self.inputField.setVisible(True)
             self.inputField.setPlaceholderText("Enter Screenshot Name")
-
-        # Description field is always visible
-        self.inputDescription.setVisible(True)
+            self.inputDescription.setVisible(True)
 
     def startAutomation(self):
         chrome_options = Options()
@@ -333,7 +354,6 @@ class WebAutomationTool(QMainWindow):
                     element = self.driver.find_element(By.XPATH, value)
                     element.send_keys(text)
                 elif action == 'Take Screenshot':
-                    # Fix the screenshot option to include a timestamp in the filename
                     timestamp = time.strftime("%Y%m%d%H%M%S")
                     screenshot_filename = f"{value}_{timestamp}.png"
                     self.driver.save_screenshot(screenshot_filename)
@@ -350,7 +370,6 @@ class WebAutomationTool(QMainWindow):
         self.logger = logging.getLogger('WebAutomationTool')
         logging.basicConfig(level=logging.INFO)
 
-        # Add custom handler to redirect logs to the log viewer
         logTextBox = QTextEditLogger(self.logViewer)
         logTextBox.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
         logging.getLogger().addHandler(logTextBox)
@@ -368,16 +387,16 @@ class WebAutomationTool(QMainWindow):
         fileName, _ = QFileDialog.getSaveFileName(self, "Save File", "", "All Files (*);;Atom8 Files (*.atm8)")
         if fileName:
             with open(fileName, "w+") as file:
-                json.dump(self.steps, file)  # Serialize steps list to JSON and save
+                json.dump(self.steps, file)
 
     def openFile(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "All Files (*);;Atom8 Files (*.atm8)")
         if fileName:
             with open(fileName, "r") as file:
-                self.steps = json.load(file)  # Load steps from JSON file
-                self.stepsList.clear()  # Clear the existing items in the list
+                self.steps = json.load(file)
+                self.stepsList.clear()
                 for step in self.steps:
-                    # Format each step for display in QListWidget
+
                     display_text = f'{step[0]}: {step[1]}, Text: {step[2]}, Description: {step[3]}'
                     if step[0] == 'Sleep':
                         display_text = f'{step[0]}: Sleep for {step[1]} seconds, Description: {step[3]}'
@@ -396,6 +415,111 @@ class WebAutomationTool(QMainWindow):
 
     def clearLogs(self):
         self.logViewer.clear()
+
+    def editSelectedStep(self):
+        selected_item = self.stepsList.currentRow()
+        if selected_item >= 0:
+            self.editMode = True
+            self.editIndex = selected_item
+            step = self.steps[selected_item]
+            action = step[0]
+            input_value = step[1]
+            text_value = step[2]
+            description_value = step[3]
+            sleep_value = step[1] if action == 'Sleep' else ''
+
+            self.actionSelection.setCurrentText(action)
+            self.inputField.setText(input_value)
+            self.inputText.setText(text_value)
+            self.inputDescription.setText(description_value)
+            self.sleepInput.setText(sleep_value)
+            self.saveButton.setVisible(True)
+            self.editButton.setVisible(False)
+
+        else:
+            QMessageBox.warning(self, "No Selection", "Please select a step to edit.")
+
+    def updateStep(self):
+        selected_item = self.stepsList.currentRow()
+        if selected_item >= 0:
+            action = self.actionSelection.currentText()
+            input_value = self.inputField.text()
+            text_value = self.inputText.text()
+            description_value = self.inputDescription.text()
+            sleep_value = self.sleepInput.text()
+
+            if action == 'Sleep' and sleep_value:
+                self.stepsList.item(selected_item).setText(
+                    f'{action}: Sleep for {sleep_value} seconds, Description: {description_value}')
+            elif input_value:
+                self.stepsList.item(selected_item).setText(
+                    f'{action}: {input_value}, Text: {text_value}, Description: {description_value}')
+            else:
+                QMessageBox.warning(self, "Invalid Input", "Please provide valid input for the selected action.")
+
+            self.steps[selected_item] = (action, input_value, text_value, description_value)
+            self.stepsList.item(selected_item).setText(
+                f'{action}: {input_value}, Text: {text_value}, Description: {description_value}')
+        else:
+            QMessageBox.warning(self, "No Selection", "Please select a step to update.")
+
+    def moveStepUp(self):
+        selected_item = self.stepsList.currentRow()
+        if selected_item >= 1:
+            self.stepsList.insertItem(selected_item - 1, self.stepsList.takeItem(selected_item))
+            self.steps.insert(selected_item - 1, self.steps.pop(selected_item))
+            self.stepsList.setCurrentRow(selected_item - 1)
+        else:
+            QMessageBox.warning(self, "No Selection", "Please select a step to move up.")
+
+    def moveStepDown(self):
+        selected_item = self.stepsList.currentRow()
+        if selected_item >= 0 and selected_item < self.stepsList.count() - 1:
+            self.stepsList.insertItem(selected_item + 1, self.stepsList.takeItem(selected_item))
+            self.steps.insert(selected_item + 1, self.steps.pop(selected_item))
+            self.stepsList.setCurrentRow(selected_item + 1)
+        else:
+            QMessageBox.warning(self, "No Selection", "Please select a step to move down.")
+
+    def addOrEditStep(self):
+        if self.editMode:
+            self.updateStep()
+            self.editMode = False
+            self.editIndex = None
+            self.editButton.setVisible(True)
+            self.saveButton.setVisible(False)
+        else:
+            self.addStep()
+
+    def saveEditedStep(self):
+        if self.editMode and self.editIndex is not None:
+            action = self.actionSelection.currentText()
+            input_value = self.inputField.text()
+            text_value = self.inputText.text()
+            description_value = self.inputDescription.text()
+            sleep_value = self.sleepInput.text() if action == 'Sleep' else ''
+
+            updated_step = (action, input_value, text_value, description_value, sleep_value)
+            self.steps[self.editIndex] = updated_step
+
+            display_text = f'{action}: {input_value}, Text: {text_value}, Description: {description_value}'
+            if action == 'Sleep':
+                display_text = f'{action}: Sleep for {sleep_value} seconds, Description: {description_value}'
+            self.stepsList.item(self.editIndex).setText(display_text)
+
+            self.editMode = False
+            self.editIndex = None
+            self.editButton.setVisible(True)
+            self.saveButton.setVisible(False)
+        else:
+            QMessageBox.warning(self, "No Selection", "Please select a step to save.")
+
+    def clearInputFields(self):
+        self.actionSelection.setCurrentIndex(0)
+        self.inputField.clear()
+        self.inputText.clear()
+        self.inputDescription.clear()
+        self.sleepInput.clear()
 
 
 if __name__ == '__main__':

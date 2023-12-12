@@ -23,6 +23,8 @@ Atom8 uses the Selenium framework to automate web actions. It is built using Pyt
 
 - **Intuitive Graphical Interface:** A user-friendly GUI that makes web automation accessible to users of all skill levels.
 - **Versatile Web Actions:** Perform a wide range of web actions, including URL navigation, element interaction, text input, and more.
+- **Customizable Automation Scripts:** Create custom scripts that cater to specific automation needs, allowing for detailed and precise automation scenarios.
+- **Execute Python Scripts:** Run custom Python scripts within Atom8, enabling users to integrate their own code into automation sequences.
 - **Headless Mode Execution:** Run automation scripts in a non-GUI mode, ideal for background tasks or systems without a display.
 - **Script Management:** Save and load automation steps efficiently, enabling reuse and sharing of complex scripts.
 - **Advanced Logging:** Comprehensive logging capabilities for monitoring automation steps and troubleshooting errors.
@@ -66,7 +68,7 @@ Atom8's versatility makes it an invaluable tool for businesses, researchers, mar
    - Edit, remove, or reorder steps as needed.
    - Clear the entire step list with a single click.
 4. **Execute Automation:**
-   - Run your sequence of steps by clicking 'Start Automation.'
+   - Run your sequence of steps by clicking 'Run'.
 5. **Logging:**
    - Review detailed logs for actions and errors.
 6. **Headless Mode:**

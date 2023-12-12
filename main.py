@@ -267,11 +267,11 @@ class WebAutomationTool(QMainWindow):
 
         self.stepsList = QListWidget(self)
 
-        self.startButton = QPushButton('Start Automation', self)
+        self.startButton = QPushButton('Run', self)
         self.startButton.clicked.connect(self.startAutomation)
 
-        self.moveUpButton = QPushButton('Move Step Up', self)
-        self.moveDownButton = QPushButton('Move Step Down', self)
+        self.moveUpButton = QPushButton('Up', self)
+        self.moveDownButton = QPushButton('Down', self)
         self.moveUpButton.clicked.connect(self.moveStepUp)
         self.moveDownButton.clicked.connect(self.moveStepDown)
 
@@ -280,9 +280,32 @@ class WebAutomationTool(QMainWindow):
         buttonsLayout.addWidget(self.editButton)
         buttonsLayout.addWidget(self.saveButton)
         buttonsLayout.addWidget(self.removeButton)
-        buttonsLayout.addWidget(self.startButton)
         buttonsLayout.addWidget(self.moveUpButton)
         buttonsLayout.addWidget(self.moveDownButton)
+        # add divider
+        # buttonsLayout.addWidget(QLabel('|'))
+        buttonsLayout.addWidget(self.startButton)
+        # set different style for start button
+        self.startButton.setStyleSheet("""
+            QPushButton {
+                color: white;
+                background-color: #28A745;
+                border-radius: 4px;
+                padding: 6px 12px;
+                border: none;
+                font-size: 12px;
+            }
+
+            QPushButton:hover {
+                background-color: #218838;
+                border-color: #1E7E34;
+            }
+
+            QPushButton:pressed {
+                background-color: #1D7D33;
+                border-color: #1C7430;
+            }
+        """)
 
         layout.addLayout(buttonsLayout)
         layout.addWidget(self.stepsList)
@@ -417,6 +440,9 @@ class WebAutomationTool(QMainWindow):
     def clearStepsList(self):
         self.stepsList.clear()
         self.steps = []
+
+        # clear input fields
+        self.clearInputFields()
 
     def saveLogs(self):
         options = QFileDialog.Options()

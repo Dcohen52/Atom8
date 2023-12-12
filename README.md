@@ -16,8 +16,6 @@ Atom8 uses the Selenium framework to automate web actions. It is built using Pyt
 - **Ease of Use:** Atom8's intuitive graphical interface makes it easy for QA professionals to create and execute automation scripts, even without prior programming experience.
 - **Error Detection and Reporting:** Atom8's robust error handling aids in quick identification and resolution of issues, enhancing the overall quality of web applications.
 - **Cost-Effectiveness:** Atom8 is a free and open-source tool, making it a cost-effective solution for QA professionals.
-- **Community Support:** Atom8's growing user community provides a platform for QA professionals to share and collaborate on automation scripts, enabling them to learn from each other and solve common challenges.
-
 
 ## Key Features
 

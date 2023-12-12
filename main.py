@@ -1,7 +1,9 @@
 import json
 import sys
+import os
 import logging
 import time
+import subprocess
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLineEdit, QLabel, QComboBox, \
     QListWidget, QHBoxLayout, QAction, QMessageBox, QFileDialog, QStatusBar, QCheckBox, QTextEdit
 from selenium import webdriver
@@ -120,7 +122,7 @@ class WebAutomationTool(QMainWindow):
             color: #333;
             background-color: #f5f5f5;
         }
-        
+
         QCheckBox {
             color: #555;
         }
@@ -213,7 +215,7 @@ class WebAutomationTool(QMainWindow):
     def setupActionSelection(self, layout):
         self.actionSelection = QComboBox(self)
         actions = ['Select Action', 'Navigate to URL', 'Click Element', 'Input Text', 'Take Screenshot',
-                   'Execute JavaScript', 'Sleep']
+                   'Execute JavaScript', 'Sleep', 'Execute Python Script']
         self.actionSelection.addItems(actions)
 
         actionSelectionLayout = QVBoxLayout()
@@ -248,7 +250,7 @@ class WebAutomationTool(QMainWindow):
     def setupButtonsAndStepsList(self, layout):
         self.editMode = False
         self.editIndex = None
-        self.addButton = QPushButton('Add/Edit Step', self)
+        self.addButton = QPushButton('Add Step', self)
         self.addButton.clicked.connect(self.addOrEditStep)
 
         self.removeButton = QPushButton('Remove Selected Step', self)
@@ -334,6 +336,11 @@ class WebAutomationTool(QMainWindow):
             self.inputField.setPlaceholderText("Enter Screenshot Name")
             self.inputDescription.setVisible(True)
 
+        if action == 'Execute Python Script':
+            self.inputField.setVisible(True)
+            self.inputField.setPlaceholderText("Enter Python Script")
+            self.inputDescription.setVisible(True)
+
     def startAutomation(self):
         chrome_options = Options()
         if self.headlessCheckbox.isChecked():
@@ -359,8 +366,16 @@ class WebAutomationTool(QMainWindow):
                 elif action == 'Sleep':
                     sleep_time = float(value)
                     time.sleep(sleep_time)
+                elif action == 'Execute Python Script':
+                    try:
+                        result = subprocess.run(['python', value], check=True, stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE)
+                        self.logger.info(result.stdout)
+                    except subprocess.CalledProcessError as e:
+                        self.logger.error(f"Error executing script: {e.stderr}")
             except Exception as e:
                 self.logger.error(f"Error in {action}: {e}")
+
         self.driver.quit()
 
     def setupLogging(self):

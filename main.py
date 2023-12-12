@@ -1,10 +1,7 @@
 import json
 import sys
-import os
 import logging
 import time
-from PyQt5.QtWidgets import QTextEdit
-
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLineEdit, QLabel, QComboBox, \
     QListWidget, QHBoxLayout, QAction, QMessageBox, QFileDialog, QStatusBar, QCheckBox, QTextEdit
 from selenium import webdriver

@@ -10,7 +10,6 @@ Atom8 is an advanced web automation tool engineered to streamline and simplify c
 - **Headless Mode Execution:** Run automation scripts in a non-GUI mode, ideal for background tasks or systems without a display.
 - **Script Management:** Save and load automation steps efficiently, enabling reuse and sharing of complex scripts.
 - **Advanced Logging:** Comprehensive logging capabilities for monitoring automation steps and troubleshooting errors.
-- **Customizable UI:** Style the interface to your preference, enhancing the user experience.
 
 ## Installation Instructions
 

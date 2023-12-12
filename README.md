@@ -74,6 +74,12 @@ Atom8's versatility makes it an invaluable tool for businesses, researchers, mar
 6. **Headless Mode:**
    - Enable this mode for running the browser without a GUI.
 
+## Screenshots
+
+![img.png](img.png)
+
+![img_2.png](img_2.png)
+
 ## License
 
 Atom8 is made available under the MIT License. Please refer to the LICENSE file for detailed terms and conditions.

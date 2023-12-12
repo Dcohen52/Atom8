@@ -242,15 +242,15 @@ class WebAutomationTool(QMainWindow):
         if action == 'Sleep' and sleep_value:
             step = (action, sleep_value, '', description_value)
             self.steps.append(step)
-            self.stepsList.addItem(f'{action}: Sleep for {sleep_value} seconds, Description: {description_value}')
+            self.stepsList.addItem(f'<b>{action}:</b> Sleep for {sleep_value} seconds, <b>Description:</b> {description_value}')
         elif input_value:
             step = (action, input_value, text_value, description_value)
             self.steps.append(step)
-            self.stepsList.addItem(f'{action}: {input_value}, Text: {text_value}, Description: {description_value}')
+            self.stepsList.addItem(f'<b>{action}:</b> {input_value}, <b>Text:</b> {text_value}, <b>Description:</b> {description_value}')
         elif action == 'Maximize Window':
             step = (action, '', '', description_value)
             self.steps.append(step)
-            self.stepsList.addItem(f'{action}')
+            self.stepsList.addItem(f'<b>{action}</b>')
         else:
             QMessageBox.warning(self, "Invalid Input", "Please provide valid input for the selected action.")
 

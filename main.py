@@ -27,8 +27,11 @@ class WebAutomationTool(QMainWindow):
         super().__init__()
         self.driver = None
         self.steps = []
+        self.recentFiles = []
+        self.recentFilesMenu = None
         self.initUI()
         self.setupLogging()
+        self.loadRecentFiles()
 
     def initUI(self):
 
@@ -126,9 +129,45 @@ class WebAutomationTool(QMainWindow):
         QCheckBox {
             color: #555;
         }
+        
+        QMenuBar {
+            color: #333;
+        }
+        
+        QMenuBar::item {
+            background-color: transparent;
+        }
+        
+        QMenuBar::item:selected { 
+            background-color: #D6D6D6;
+        }
+        
+        QMenuBar::item:pressed {
+            background-color: #C6C6C6;
+        }
+        
+        QMenu {
+            background-color: #FFFFFF;
+            border: 1px solid #ddd;
+        }
+        
+        QMenu::item {
+            padding: 6px;
+            width: 150px;
+        }
+        
+        QMenu::item:selected {
+            background-color: #007BFF;
+            color: white;
+        }
+        
+        QMenu::item:pressed {
+            background-color: #0069D9;
+            color: white;
+        }
         """
 
-        self.setWindowTitle('Atom8 - Advanced Web Automation Tool')
+        self.setWindowTitle('Atom8')
         self.setGeometry(100, 100, 800, 600)
 
         self.statusBar = QStatusBar()
@@ -167,6 +206,7 @@ class WebAutomationTool(QMainWindow):
     def setupMenuBar(self):
         menuBar = self.menuBar()
         fileMenu = menuBar.addMenu('File')
+
         helpMenu = menuBar.addMenu('Help')
 
         openAction = QAction('Open', self)
@@ -174,6 +214,9 @@ class WebAutomationTool(QMainWindow):
         saveAction = QAction('Save', self)
         saveAction.triggered.connect(self.saveFile)
         fileMenu.addAction(openAction)
+
+        self.recentFilesMenu = fileMenu.addMenu('Open Recent')
+        self.updateRecentFilesMenu()
 
         fileMenu.addAction(saveAction)
         fileMenu.addSeparator()
@@ -204,6 +247,10 @@ class WebAutomationTool(QMainWindow):
             step = (action, input_value, text_value, description_value)
             self.steps.append(step)
             self.stepsList.addItem(f'{action}: {input_value}, Text: {text_value}, Description: {description_value}')
+        elif action == 'Maximize Window':
+            step = (action, '', '', description_value)
+            self.steps.append(step)
+            self.stepsList.addItem(f'{action}')
         else:
             QMessageBox.warning(self, "Invalid Input", "Please provide valid input for the selected action.")
 
@@ -215,7 +262,7 @@ class WebAutomationTool(QMainWindow):
     def setupActionSelection(self, layout):
         self.actionSelection = QComboBox(self)
         actions = ['Select Action', 'Navigate to URL', 'Click Element', 'Input Text', 'Take Screenshot',
-                   'Execute JavaScript', 'Sleep', 'Execute Python Script']
+                   'Execute JavaScript', 'Sleep', 'Execute Python Script', 'Maximize Window']
         self.actionSelection.addItems(actions)
 
         actionSelectionLayout = QVBoxLayout()
@@ -282,10 +329,8 @@ class WebAutomationTool(QMainWindow):
         buttonsLayout.addWidget(self.removeButton)
         buttonsLayout.addWidget(self.moveUpButton)
         buttonsLayout.addWidget(self.moveDownButton)
-        # add divider
-        # buttonsLayout.addWidget(QLabel('|'))
         buttonsLayout.addWidget(self.startButton)
-        # set different style for start button
+
         self.startButton.setStyleSheet("""
             QPushButton {
                 color: white;
@@ -396,6 +441,9 @@ class WebAutomationTool(QMainWindow):
                         self.logger.info(result.stdout)
                     except subprocess.CalledProcessError as e:
                         self.logger.error(f"Error executing script: {e.stderr}")
+                elif action == 'Maximize Window':
+                    self.driver.maximize_window()
+
             except Exception as e:
                 self.logger.error(f"Error in {action}: {e}")
 
@@ -412,21 +460,40 @@ class WebAutomationTool(QMainWindow):
 
     def showAboutDialog(self):
         QMessageBox.about(self, "About Atom8", """
-        <p>Atom8 - Advanced Web Automation Tool</p>
-        <p>Version 0.1</p>
-        <p>Atom8 is a tool for automating web tasks. It is built to be simple and easy to use.</p>
-        <p>Created by Dekel Cohen</p>
+        <html>
+        <head>
+            <style> 
+                p { font-family: Arial, sans-serif; line-height: 1.6; }
+                a { text-decoration: none; color: #007BFF; }
+                a:hover { text-decoration: underline; }
+            </style>
+        </head>
+        <body>
+            <h2>Atom8 - Advanced Web Automation Tool</h2>
+            <p><strong>Version:</strong> 0.1</p>
+            <p>Atom8 is an advanced web automation tool designed for efficiency and ease of use. Ideal for both professionals and hobbyists, it simplifies complex web tasks through its advanced technology, offering a seamless automation experience. Atom8 excels in a wide range of applications from data scraping to intricate testing workflows.</p>
+            <p>Under active development, Atom8 continually evolves to meet the growing and changing needs of the web automation world.</p>
+            <p><strong>Created by:</strong> Dekel Cohen</p>
+            <p><strong>License:</strong> MIT License</p>
+
+            <p>Discover more about Atom8, get updates, and access support on our GitHub page: <a href="https://github.com/Dcohen52/Atom8" target="_blank">Atom8 GitHub Repository</a>.</p>
+
+            <p><strong>Disclaimer:</strong> Atom8 is an independent project, not officially affiliated with or endorsed by the Selenium project or its associates.</p>
+        </body>
+        </html>
         """)
 
     def saveFile(self):
         fileName, _ = QFileDialog.getSaveFileName(self, "Save File", "", "All Files (*);;Atom8 Files (*.atm8)")
         if fileName:
+            self.updateRecentFiles(fileName)
             with open(fileName, "w+") as file:
                 json.dump(self.steps, file)
 
     def openFile(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "All Files (*);;Atom8 Files (*.atm8)")
         if fileName:
+            self.updateRecentFiles(fileName)
             with open(fileName, "r") as file:
                 self.steps = json.load(file)
                 self.stepsList.clear()
@@ -440,8 +507,6 @@ class WebAutomationTool(QMainWindow):
     def clearStepsList(self):
         self.stepsList.clear()
         self.steps = []
-
-        # clear input fields
         self.clearInputFields()
 
     def saveLogs(self):
@@ -558,6 +623,48 @@ class WebAutomationTool(QMainWindow):
         self.inputText.clear()
         self.inputDescription.clear()
         self.sleepInput.clear()
+
+    def updateRecentFiles(self, filePath):
+        if filePath in self.recentFiles:
+            self.recentFiles.remove(filePath)
+        self.recentFiles.insert(0, filePath)
+        self.recentFiles = self.recentFiles[:10]
+        self.updateRecentFilesMenu()
+
+    def updateRecentFilesMenu(self):
+        self.recentFilesMenu.clear()
+        for filePath in self.recentFiles:
+            action = QAction(filePath, self)
+            action.triggered.connect(lambda checked, path=filePath: self.openRecentFile(path))
+            self.recentFilesMenu.addAction(action)
+
+    def openRecentFile(self, filePath):
+        with open(filePath, "r") as file:
+            self.steps = json.load(file)
+            self.stepsList.clear()
+            for step in self.steps:
+                display_text = f'{step[0]}: {step[1]}, Text: {step[2]}, Description: {step[3]}'
+                if step[0] == 'Sleep':
+                    display_text = f'{step[0]}: Sleep for {step[1]} seconds, Description: {step[3]}'
+                self.stepsList.addItem(display_text)
+            self.updateRecentFiles(filePath)
+
+    def loadRecentFiles(self):
+        try:
+            with open('recent_files.json', 'r') as file:
+                self.recentFiles = json.load(file)
+        except (FileNotFoundError, json.JSONDecodeError):
+            self.recentFiles = []
+
+        self.updateRecentFilesMenu()
+
+    def closeEvent(self, event):
+        self.saveRecentFiles()
+        super().closeEvent(event)
+
+    def saveRecentFiles(self):
+        with open('recent_files.json', 'w') as file:
+            json.dump(self.recentFiles, file)
 
 
 if __name__ == '__main__':

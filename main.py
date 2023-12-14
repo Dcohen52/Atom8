@@ -4,11 +4,18 @@ import os
 import logging
 import time
 import subprocess
+
+import requests
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLineEdit, QLabel, QComboBox, \
-    QListWidget, QHBoxLayout, QAction, QMessageBox, QFileDialog, QStatusBar, QCheckBox, QTextEdit
+    QListWidget, QHBoxLayout, QAction, QMessageBox, QFileDialog, QStatusBar, QCheckBox, QTextEdit, QInputDialog, \
+    QDialog, QTableWidgetItem, QTableWidget, QMenu, QHeaderView
+from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+
+from helper import extract_elements_to_json
 
 
 class QTextEditLogger(logging.Handler):
@@ -32,6 +39,8 @@ class WebAutomationTool(QMainWindow):
         self.initUI()
         self.setupLogging()
         self.loadRecentFiles()
+        self.currentFilePath = None
+        self.resultsTable = None
 
     def initUI(self):
 
@@ -129,38 +138,38 @@ class WebAutomationTool(QMainWindow):
         QCheckBox {
             color: #555;
         }
-        
+
         QMenuBar {
             color: #333;
         }
-        
+
         QMenuBar::item {
             background-color: transparent;
         }
-        
+
         QMenuBar::item:selected { 
             background-color: #D6D6D6;
         }
-        
+
         QMenuBar::item:pressed {
             background-color: #C6C6C6;
         }
-        
+
         QMenu {
             background-color: #FFFFFF;
             border: 1px solid #ddd;
         }
-        
+
         QMenu::item {
             padding: 6px;
             width: 150px;
         }
-        
+
         QMenu::item:selected {
             background-color: #007BFF;
             color: white;
         }
-        
+
         QMenu::item:pressed {
             background-color: #0069D9;
             color: white;
@@ -206,71 +215,120 @@ class WebAutomationTool(QMainWindow):
     def setupMenuBar(self):
         menuBar = self.menuBar()
         fileMenu = menuBar.addMenu('File')
-
+        toolsMenu = menuBar.addMenu('Tools')
         helpMenu = menuBar.addMenu('Help')
+
+        newAction = QAction('New', self)
+        newAction.triggered.connect(self.newFile)
+        newAction.setShortcut('Ctrl+N')
+        fileMenu.addAction(newAction)
 
         openAction = QAction('Open', self)
         openAction.triggered.connect(self.openFile)
-        saveAction = QAction('Save', self)
-        saveAction.triggered.connect(self.saveFile)
+        openAction.setShortcut('Ctrl+O')
         fileMenu.addAction(openAction)
 
         self.recentFilesMenu = fileMenu.addMenu('Open Recent')
         self.updateRecentFilesMenu()
 
+        realSaveAction = QAction('Save', self)
+        realSaveAction.triggered.connect(self.realSaveFile)
+        realSaveAction.setShortcut('Ctrl+S')
+        fileMenu.addAction(realSaveAction)
+
+        saveAction = QAction('Save As', self)
+        saveAction.triggered.connect(self.saveFile)
+        saveAction.setShortcut('Ctrl+Shift+S')
         fileMenu.addAction(saveAction)
+
+        clearAction = QAction('Clear All', self)
+        clearAction.triggered.connect(self.clearStepsList)
+        clearAction.setShortcut('Ctrl+N')
+        fileMenu.addAction(clearAction)
+
         fileMenu.addSeparator()
+
+        preferencesAction = QAction('Preferences', self)
+        preferencesAction.triggered.connect(self.prefs)
+        fileMenu.addAction(preferencesAction)
+        preferencesAction.setShortcut('Ctrl+P')
+
+        exitAction = QAction('Exit', self)
+        exitAction.triggered.connect(self.close)
+        exitAction.setShortcut('Ctrl+Q')
+        fileMenu.addAction(exitAction)
+
+        extractElementsAction = QAction('Extract Web Elements', self)
+        extractElementsAction.triggered.connect(self.extractWebElements)
+        extractElementsAction.setShortcut('Ctrl+E')
+        toolsMenu.addAction(extractElementsAction)
+
         aboutAction = QAction('About', self)
         aboutAction.triggered.connect(self.showAboutDialog)
         helpMenu.addAction(aboutAction)
 
-        clearAction = QAction('Clear', self)
-        clearAction.triggered.connect(self.clearStepsList)
-        fileMenu.addAction(clearAction)
-
-        exitAction = QAction('Exit', self)
-        exitAction.triggered.connect(self.close)
-        fileMenu.addAction(exitAction)
-
     def addStep(self):
         action = self.actionSelection.currentText()
-        input_value = self.inputField.text()
+        locator_type = self.locatorSelection.currentText()
+        locator_value = self.locatorInput.text()
         text_value = self.inputText.text()
         description_value = self.inputDescription.text()
         sleep_value = self.sleepInput.text()
 
-        if action == 'Sleep' and sleep_value:
-            step = (action, sleep_value, '', description_value)
-            self.steps.append(step)
-            self.stepsList.addItem(f'<b>{action}:</b> Sleep for {sleep_value} seconds, <b>Description:</b> {description_value}')
-        elif input_value:
-            step = (action, input_value, text_value, description_value)
-            self.steps.append(step)
-            self.stepsList.addItem(f'<b>{action}:</b> {input_value}, <b>Text:</b> {text_value}, <b>Description:</b> {description_value}')
+        if action == 'Sleep':
+            step = (action, sleep_value)
+            display_txt = f'Sleep for {sleep_value} seconds.'
+            self.logger.info(f"Added step: {display_txt}")
+        elif action in ['Click Element', 'Input Text']:
+            step = (action, locator_type, locator_value, text_value, description_value)
+            display_txt = f'{action}: {locator_value if locator_value else text_value} (Locator: {locator_type if locator_type != "Select Locator" else "N/A"}), Description: {"N/A" if not description_value else description_value})'
+            self.logger.info(f"Added step: {display_txt}")
+        elif action in ['Navigate to URL', 'Execute JavaScript', 'Execute Python Script']:
+            step = action
+            display_txt = f'{action}: {text_value}{"." if not description_value else f", Description: {description_value}"}'
+            self.logger.info(f"Added step: {display_txt}")
         elif action == 'Maximize Window':
-            step = (action, '', '', description_value)
-            self.steps.append(step)
-            self.stepsList.addItem(f'<b>{action}</b>')
+            step = action
+            display_txt = f'Maximize Window.'
+            self.logger.info(f"Added step: {display_txt}")
+        elif action == 'Take Screenshot':
+            screenshot_filename = self.inputText.text()
+            if not screenshot_filename.endswith('.png'):
+                screenshot_filename += '.png'
+            step = (action, screenshot_filename)
+            display_txt = f'Take screenshot and save as {screenshot_filename}'
+            self.logger.info(f"Added step: {display_txt}")
         else:
-            QMessageBox.warning(self, "Invalid Input", "Please provide valid input for the selected action.")
+            QMessageBox.warning(self, "Invalid Action", "The selected action is not supported.")
+            return
 
-        self.inputField.clear()
-        self.inputText.clear()
-        self.sleepInput.clear()
-        self.inputDescription.clear()
+        self.steps.append(step)
+        self.stepsList.addItem(display_txt)
 
     def setupActionSelection(self, layout):
         self.actionSelection = QComboBox(self)
         actions = ['Select Action', 'Navigate to URL', 'Click Element', 'Input Text', 'Take Screenshot',
                    'Execute JavaScript', 'Sleep', 'Execute Python Script', 'Maximize Window']
         self.actionSelection.addItems(actions)
+        self.actionSelection.currentIndexChanged.connect(self.updateFields)
 
         actionSelectionLayout = QVBoxLayout()
         actionSelectionLayout.addWidget(QLabel('Select Action:'))
         actionSelectionLayout.addWidget(self.actionSelection)
 
-        self.inputField = QLineEdit(self)
-        self.inputField.setPlaceholderText("Enter URL or XPath")
+        self.locatorSelection = QComboBox(self)
+        locator_types = ['Select Locator', 'XPath', 'CSS Selector', 'ID', 'Name', 'Class Name', 'Tag Name', 'Link Text',
+                         'Partial Link Text']
+        self.locatorSelection.addItems(locator_types)
+
+        self.locatorInput = QLineEdit(self)
+        self.locatorInput.setPlaceholderText("Enter locator value")
+
+        locatorLayout = QHBoxLayout()
+        locatorLayout.addWidget(self.locatorSelection)
+        locatorLayout.addWidget(self.locatorInput)
+
+        actionSelectionLayout.addLayout(locatorLayout)
 
         self.inputText = QLineEdit(self)
         self.inputText.setPlaceholderText("Enter Text")
@@ -282,17 +340,12 @@ class WebAutomationTool(QMainWindow):
         self.inputDescription.setPlaceholderText("Enter Description")
 
         fieldsLayout = QVBoxLayout()
-        fieldsLayout.addWidget(self.inputField)
         fieldsLayout.addWidget(self.inputText)
         fieldsLayout.addWidget(self.sleepInput)
         fieldsLayout.addWidget(self.inputDescription)
 
         actionSelectionLayout.addLayout(fieldsLayout)
         layout.addLayout(actionSelectionLayout)
-
-        self.actionSelection.currentIndexChanged.connect(self.updateFields)
-
-        self.updateFields()
 
     def setupButtonsAndStepsList(self, layout):
         self.editMode = False
@@ -321,6 +374,12 @@ class WebAutomationTool(QMainWindow):
         self.moveDownButton = QPushButton('Down', self)
         self.moveUpButton.clicked.connect(self.moveStepUp)
         self.moveDownButton.clicked.connect(self.moveStepDown)
+
+        self.locatorSelection.setVisible(False)
+        self.locatorInput.setVisible(False)
+        self.inputText.setVisible(False)
+        self.sleepInput.setVisible(False)
+        self.inputDescription.setVisible(False)
 
         buttonsLayout = QHBoxLayout()
         buttonsLayout.addWidget(self.addButton)
@@ -355,59 +414,51 @@ class WebAutomationTool(QMainWindow):
         layout.addLayout(buttonsLayout)
         layout.addWidget(self.stepsList)
 
+    def updateLocatorFields(self):
+        locator_type = self.locatorSelection.currentText()
+        self.locatorInput.setVisible(locator_type != 'Select Locator')
+
     def removeSelectedStep(self):
         selected_item = self.stepsList.currentRow()
         if selected_item >= 0:
+            del self.steps[selected_item]
             self.stepsList.takeItem(selected_item)
-            del self.steps[self.stepsList.currentRow()]
+            self.logger.info(f"Removed step at index {selected_item}.")
         else:
             QMessageBox.warning(self, "No Selection", "Please select a step to remove.")
 
     def updateFields(self):
         action = self.actionSelection.currentText()
 
-        self.inputField.setVisible(False)
-        self.inputText.setVisible(False)
-        self.sleepInput.setVisible(False)
-        self.inputDescription.setVisible(False)
-        self.inputField.setPlaceholderText("")
-        self.inputText.setPlaceholderText("")
-        self.sleepInput.setPlaceholderText("")
+        if action in ['Click Element', 'Input Text']:
+            self.locatorSelection.setVisible(True)
+            self.locatorInput.setVisible(True)
+        else:
+            self.locatorSelection.setVisible(False)
+            self.locatorInput.setVisible(False)
 
-        if action in ['Navigate to URL', 'Click Element', 'Input Text']:
-            self.inputField.setVisible(True)
-            self.inputDescription.setVisible(True)
-            if action == 'Navigate to URL':
-                self.inputField.setPlaceholderText("Enter URL")
-                self.inputDescription.setVisible(True)
-            elif action == 'Click Element':
-                self.inputField.setPlaceholderText("Enter XPath")
-                self.inputDescription.setVisible(True)
-            elif action == 'Input Text':
-                self.inputField.setPlaceholderText("Enter XPath")
-                self.inputText.setVisible(True)
-                self.inputText.setPlaceholderText("Enter Text")
-                self.inputDescription.setVisible(True)
+        self.inputText.setVisible(
+            action in ['Input Text', 'Execute Python Script', 'Execute JavaScript', 'Navigate to URL',
+                       'Take Screenshot'])
+        self.sleepInput.setVisible(action == 'Sleep')
+        self.inputDescription.setVisible(
+            action in ['Click Element', 'Input Text', 'Sleep', 'Navigate to URL', 'Execute Python Script',
+                       'Execute JavaScript'])
 
-        if action == 'Sleep':
-            self.sleepInput.setVisible(True)
-            self.sleepInput.setPlaceholderText("Enter Sleep Time (in seconds)")
-            self.inputDescription.setVisible(True)
-
-        if action == 'Execute JavaScript':
-            self.inputField.setVisible(True)
-            self.inputField.setPlaceholderText("Enter JavaScript")
-            self.inputDescription.setVisible(True)
-
-        if action == 'Take Screenshot':
-            self.inputField.setVisible(True)
-            self.inputField.setPlaceholderText("Enter Screenshot Name")
-            self.inputDescription.setVisible(True)
-
-        if action == 'Execute Python Script':
-            self.inputField.setVisible(True)
-            self.inputField.setPlaceholderText("Enter Python Script")
-            self.inputDescription.setVisible(True)
+        if action == 'Navigate to URL':
+            self.inputText.setPlaceholderText("Enter URL")
+        elif action == 'Input Text':
+            self.inputText.setPlaceholderText("Enter Text")
+        elif action == 'Execute Python Script':
+            self.inputText.setPlaceholderText("Enter Script Path")
+        elif action == 'Execute JavaScript':
+            self.inputText.setPlaceholderText("Enter JavaScript Code")
+        elif action == 'Sleep':
+            self.inputText.setPlaceholderText("Enter Sleep Time (in seconds)")
+        elif action == 'Take Screenshot':
+            self.inputText.setPlaceholderText("Enter Screenshot Name")
+        else:
+            self.inputText.setPlaceholderText("Enter Text")
 
     def startAutomation(self):
         chrome_options = Options()
@@ -415,32 +466,38 @@ class WebAutomationTool(QMainWindow):
             chrome_options.add_argument("--headless")
 
         self.driver = webdriver.Chrome(options=chrome_options)
-        for action, value, text, description in self.steps:
+
+        locator_strategies = {
+            'XPath': By.XPATH,
+            'CSS Selector': By.CSS_SELECTOR,
+            'ID': By.ID,
+            'Name': By.NAME,
+            'Class Name': By.CLASS_NAME,
+            'Tag Name': By.TAG_NAME,
+            'Link Text': By.LINK_TEXT,
+            'Partial Link Text': By.PARTIAL_LINK_TEXT
+        }
+
+        for step in self.steps:
+            action = step[0]
+
             try:
                 if action == 'Navigate to URL':
-                    self.driver.get(value)
-                elif action == 'Click Element':
-                    element = self.driver.find_element(By.XPATH, value)
-                    element.click()
-                elif action == 'Input Text':
-                    element = self.driver.find_element(By.XPATH, value)
-                    element.send_keys(text)
+                    self.driver.get(step[1])
+                elif action in ['Click Element', 'Input Text']:
+                    locator_type = step[1]
+                    locator_value = step[2]
+                    element = self.driver.find_element(locator_strategies[locator_type], locator_value)
+                    if action == 'Click Element':
+                        element.click()
+                    else:
+                        element.send_keys(step[3])
                 elif action == 'Take Screenshot':
-                    timestamp = time.strftime("%Y%m%d%H%M%S")
-                    screenshot_filename = f"{value}_{timestamp}.png"
-                    self.driver.save_screenshot(screenshot_filename)
+                    self.driver.save_screenshot(step[1])
                 elif action == 'Execute JavaScript':
-                    self.driver.execute_script(value)
+                    self.driver.execute_script(step[1])
                 elif action == 'Sleep':
-                    sleep_time = float(value)
-                    time.sleep(sleep_time)
-                elif action == 'Execute Python Script':
-                    try:
-                        result = subprocess.run(['python', value], check=True, stdout=subprocess.PIPE,
-                                                stderr=subprocess.PIPE)
-                        self.logger.info(result.stdout)
-                    except subprocess.CalledProcessError as e:
-                        self.logger.error(f"Error executing script: {e.stderr}")
+                    time.sleep(float(step[1]))
                 elif action == 'Maximize Window':
                     self.driver.maximize_window()
 
@@ -448,6 +505,7 @@ class WebAutomationTool(QMainWindow):
                 self.logger.error(f"Error in {action}: {e}")
 
         self.driver.quit()
+        self.logger.info("\n\nOperation completed successfully.\n\n")
 
     def setupLogging(self):
         self.logger = logging.getLogger('WebAutomationTool')
@@ -472,7 +530,7 @@ class WebAutomationTool(QMainWindow):
             <h2>Atom8 - Advanced Web Automation Tool</h2>
             <p><strong>Version:</strong> 0.1</p>
             <p>Atom8 is an advanced web automation tool designed for efficiency and ease of use. Ideal for both professionals and hobbyists, it simplifies complex web tasks through its advanced technology, offering a seamless automation experience. Atom8 excels in a wide range of applications from data scraping to intricate testing workflows.</p>
-            <p>Under active development, Atom8 continually evolves to meet the growing and changing needs of the web automation world.</p>
+            <p>Atom8 is built on top of Selenium, a popular web automation framework. It is designed to be a user-friendly alternative to Selenium, offering a simple and intuitive interface for creating and running, simple and complex automation tasks.</p>
             <p><strong>Created by:</strong> Dekel Cohen</p>
             <p><strong>License:</strong> MIT License</p>
 
@@ -484,30 +542,140 @@ class WebAutomationTool(QMainWindow):
         """)
 
     def saveFile(self):
-        fileName, _ = QFileDialog.getSaveFileName(self, "Save File", "", "All Files (*);;Atom8 Files (*.atm8)")
+        fileName, _ = QFileDialog.getSaveFileName(self, "Save As", "", "Atom8 Files (*.atm8)")
         if fileName:
+            self.currentFilePath = fileName
             self.updateRecentFiles(fileName)
             with open(fileName, "w+") as file:
                 json.dump(self.steps, file)
+            self.statusBar.showMessage("File saved as new file.", 5000)
+
+    def realSaveFile(self):
+        if self.currentFilePath:
+            with open(self.currentFilePath, "w") as file:
+                json.dump(self.steps, file)
+            self.statusBar.showMessage("File saved successfully.", 5000)
+        else:
+            self.saveFile()
 
     def openFile(self):
         fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "All Files (*);;Atom8 Files (*.atm8)")
         if fileName:
+            self.currentFilePath = fileName
             self.updateRecentFiles(fileName)
-            with open(fileName, "r") as file:
-                self.steps = json.load(file)
-                self.stepsList.clear()
-                for step in self.steps:
+            try:
+                with open(fileName, "r") as file:
+                    loaded_steps = json.load(file)
+                    if not isinstance(loaded_steps, list):
+                        raise ValueError("File content is not in the expected list format")
 
-                    display_text = f'{step[0]}: {step[1]}, Text: {step[2]}, Description: {step[3]}'
-                    if step[0] == 'Sleep':
-                        display_text = f'{step[0]}: Sleep for {step[1]} seconds, Description: {step[3]}'
-                    self.stepsList.addItem(display_text)
+                    self.steps = loaded_steps
+                    self.stepsList.clear()
+                    for index, step in enumerate(self.steps):
+                        if not isinstance(step, (list, tuple)):
+                            QMessageBox.critical(self, "Error", f"Invalid step format at index {index}: {step}")
+                            continue
+                        display_text = self.constructStepDisplayText(step)
+                        self.stepsList.addItem(display_text)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to open file: {e}")
+
+    def constructStepDisplayText(self, step):
+        try:
+            action = step[0]
+            if action == 'Sleep':
+                return f'Sleep for {step[1]} seconds.'
+            elif action in ['Click Element', 'Input Text', 'Take Screenshot']:
+                locator_type, locator_value, text_value, description = step[1], step[2], step[3], step[4]
+                return f'{action}: {locator_value} (Locator: {locator_type}), Text: {text_value}, Description: {description}'
+            elif action in ['Navigate to URL', 'Execute JavaScript', 'Execute Python Script']:
+                return f'{action}: {step[1]}, Description: {step[2]}'
+            else:
+                return f'Unknown Action: {action}'
+        except IndexError:
+            return f'Error: Step format incorrect - {step}'
 
     def clearStepsList(self):
         self.stepsList.clear()
-        self.steps = []
+        self.steps.clear()
         self.clearInputFields()
+
+    def prefs(self):
+        self.prefsWindow = QDialog(self, Qt.Window)
+        self.prefsWindow.setWindowTitle("Preferences")
+        prefsLayout = QVBoxLayout()
+
+        browserLabel = QLabel("Default Browser:")
+        self.browserComboBox = QComboBox()
+        self.browserComboBox.addItems(["Chrome", "Firefox", "Safari", "Edge"])
+        self.browserComboBox.setCurrentText(self.loadSetting("defaultBrowser", "Chrome"))
+
+        browserLayout = QHBoxLayout()
+        browserLayout.addWidget(browserLabel)
+        browserLayout.addWidget(self.browserComboBox)
+        prefsLayout.addLayout(browserLayout)
+
+        savePathLabel = QLabel("Default Save Path:")
+        self.savePathLineEdit = QLineEdit()
+        self.savePathLineEdit.setText(self.loadSetting("savePath", ""))
+        savePathLayout = QHBoxLayout()
+        savePathLayout.addWidget(savePathLabel)
+        savePathLayout.addWidget(self.savePathLineEdit)
+        prefsLayout.addLayout(savePathLayout)
+
+        saveButton = QPushButton("Save")
+        saveButton.clicked.connect(self.savePrefs)
+        prefsLayout.addWidget(saveButton)
+
+        self.prefsWindow.setLayout(prefsLayout)
+        self.prefsWindow.resize(400, 200)
+        self.prefsWindow.show()
+
+    def savePrefs(self):
+        self.saveSetting("defaultBrowser", self.browserComboBox.currentText())
+        self.saveSetting("savePath", self.savePathLineEdit.text())
+        self.prefsWindow.close()
+
+    def saveSetting(self, key, value):
+        settings = self.loadSettings()
+
+        settings[key] = value
+
+        with open('settings.json', 'w') as file:
+            json.dump(settings, file)
+
+    def loadSetting(self, key, defaultValue=None):
+        settings = self.loadSettings()
+
+        return settings.get(key, defaultValue)
+
+    def loadSettings(self):
+        try:
+            with open('settings.json', 'r') as file:
+                return json.load(file)
+        except (FileNotFoundError, json.JSONDecodeError):
+            self.logger.warning("Failed to load settings file.")
+            return {}
+
+    def newFile(self):
+        if self.steps:
+            msgBox = QMessageBox()
+            msgBox.setIcon(QMessageBox.Question)
+            msgBox.setText("Do you want to save the current file?")
+            msgBox.setWindowTitle("Save File")
+            msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
+            msgBox.setDefaultButton(QMessageBox.Yes)
+            response = msgBox.exec()
+
+            if response == QMessageBox.Yes:
+                self.realSaveFile()
+                self.clearStepsList()
+                self.clearInputFields()
+            elif response == QMessageBox.No:
+                self.clearStepsList()
+                self.clearInputFields()
+            elif response == QMessageBox.Cancel:
+                return
 
     def saveLogs(self):
         options = QFileDialog.Options()
@@ -524,21 +692,52 @@ class WebAutomationTool(QMainWindow):
         if selected_item >= 0:
             self.editMode = True
             self.editIndex = selected_item
+            self.editButton.setVisible(False)
+            self.saveButton.setVisible(True)
+
             step = self.steps[selected_item]
             action = step[0]
-            input_value = step[1]
-            text_value = step[2]
-            description_value = step[3]
-            sleep_value = step[1] if action == 'Sleep' else ''
-
             self.actionSelection.setCurrentText(action)
-            self.inputField.setText(input_value)
-            self.inputText.setText(text_value)
-            self.inputDescription.setText(description_value)
-            self.sleepInput.setText(sleep_value)
-            self.saveButton.setVisible(True)
-            self.editButton.setVisible(False)
+            if action in ['Click Element', 'Input Text']:
+                self.locatorSelection.setVisible(True)
+                self.locatorInput.setVisible(True)
+                self.locatorSelection.setCurrentText(step[1])
+                self.locatorInput.setText(step[2])
+            else:
+                self.locatorSelection.setVisible(False)
+                self.locatorInput.setVisible(False)
 
+            self.inputText.setVisible(
+                action in ['Input Text', 'Execute Python Script', 'Execute JavaScript', 'Navigate to URL',
+                           'Take Screenshot'])
+            self.sleepInput.setVisible(action == 'Sleep')
+            self.inputDescription.setVisible(
+                action in ['Click Element', 'Input Text', 'Sleep', 'Navigate to URL', 'Execute Python Script',
+                           'Execute JavaScript'])
+
+            if action == 'Navigate to URL':
+                self.inputText.setPlaceholderText("Enter URL")
+                self.inputText.setText(step[1])
+            elif action == 'Input Text':
+                self.inputText.setPlaceholderText("Enter Text")
+                self.inputText.setText(step[3])
+            elif action == 'Execute Python Script':
+                self.inputText.setPlaceholderText("Enter Script Path")
+                self.inputText.setText(step[1])
+            elif action == 'Execute JavaScript':
+                self.inputText.setPlaceholderText("Enter JavaScript Code")
+                self.inputText.setText(step[1])
+            elif action == 'Sleep':
+                self.inputText.setPlaceholderText("Enter Sleep Time (in seconds)")
+                self.inputText.setText(step[1])
+            elif action == 'Take Screenshot':
+                self.inputText.setPlaceholderText("Enter Screenshot Name")
+                self.inputText.setText(step[1])
+            else:
+                self.inputText.setPlaceholderText("Enter Text")
+                self.inputText.setText(step[1])
+
+            self.inputDescription.setText(step[-1])
         else:
             QMessageBox.warning(self, "No Selection", "Please select a step to edit.")
 
@@ -546,23 +745,33 @@ class WebAutomationTool(QMainWindow):
         selected_item = self.stepsList.currentRow()
         if selected_item >= 0:
             action = self.actionSelection.currentText()
-            input_value = self.inputField.text()
+            locator_type = self.locatorSelection.currentText()
+            locator_value = self.locatorInput.text()
             text_value = self.inputText.text()
-            description_value = self.inputDescription.text()
             sleep_value = self.sleepInput.text()
+            description_value = self.inputDescription.text()
 
-            if action == 'Sleep' and sleep_value:
-                self.stepsList.item(selected_item).setText(
-                    f'{action}: Sleep for {sleep_value} seconds, Description: {description_value}')
-            elif input_value:
-                self.stepsList.item(selected_item).setText(
-                    f'{action}: {input_value}, Text: {text_value}, Description: {description_value}')
+            if action == 'Sleep':
+                step = (action, sleep_value)
+                display_txt = f'Sleep for {sleep_value} seconds.'
+            elif action in ['Click Element', 'Input Text']:
+                step = (action, locator_type, locator_value, text_value, description_value)
+                display_txt = f'{action}: {locator_value if locator_value else text_value} (Locator: {locator_type if locator_type != "Select Locator" else "N/A"}), Description: {description_value}'
+            elif action in ['Navigate to URL', 'Execute JavaScript', 'Execute Python Script']:
+                step = (action, text_value, description_value)
+                display_txt = f'{action}: {text_value}{"." if not description_value else f", Description: {description_value}"}'
+            elif action == 'Take Screenshot':
+                step = (action, text_value, description_value)
+                display_txt = f'Take screenshot and save as {text_value}{".png" if not text_value.endswith(".png") else ""}{"." if not description_value else f", Description: {description_value}"}'
+            elif action == 'Maximize Window':
+                step = action
+                display_txt = f'Maximize Window.'
             else:
-                QMessageBox.warning(self, "Invalid Input", "Please provide valid input for the selected action.")
+                QMessageBox.warning(self, "Invalid Action", "The selected action is not supported.")
+                return
 
-            self.steps[selected_item] = (action, input_value, text_value, description_value)
-            self.stepsList.item(selected_item).setText(
-                f'{action}: {input_value}, Text: {text_value}, Description: {description_value}')
+            self.steps[selected_item] = step
+            self.stepsList.item(selected_item).setText(display_txt)
         else:
             QMessageBox.warning(self, "No Selection", "Please select a step to update.")
 
@@ -595,41 +804,27 @@ class WebAutomationTool(QMainWindow):
             self.addStep()
 
     def saveEditedStep(self):
-        if self.editMode and self.editIndex is not None:
-            action = self.actionSelection.currentText()
-            input_value = self.inputField.text()
-            text_value = self.inputText.text()
-            description_value = self.inputDescription.text()
-            sleep_value = self.sleepInput.text() if action == 'Sleep' else ''
+        self.updateStep()
+        self.editMode = False
+        self.editIndex = None
+        self.editButton.setVisible(True)
+        self.saveButton.setVisible(False)
+        self.clearInputFields()
 
-            updated_step = (action, input_value, text_value, description_value, sleep_value)
-            self.steps[self.editIndex] = updated_step
-
-            display_text = f'{action}: {input_value}, Text: {text_value}, Description: {description_value}'
-            if action == 'Sleep':
-                display_text = f'{action}: Sleep for {sleep_value} seconds, Description: {description_value}'
-            self.stepsList.item(self.editIndex).setText(display_text)
-
-            self.editMode = False
-            self.editIndex = None
-            self.editButton.setVisible(True)
-            self.saveButton.setVisible(False)
-        else:
-            QMessageBox.warning(self, "No Selection", "Please select a step to save.")
+        self.logger.info("Saved edited step.")
 
     def clearInputFields(self):
         self.actionSelection.setCurrentIndex(0)
-        self.inputField.clear()
-        self.inputText.clear()
-        self.inputDescription.clear()
-        self.sleepInput.clear()
+        self.locatorSelection.setCurrentIndex(0)
+        self.locatorInput.setText('')
+        self.inputText.setText('')
+        self.sleepInput.setText('')
+        self.inputDescription.setText('')
 
     def updateRecentFiles(self, filePath):
-        if filePath in self.recentFiles:
-            self.recentFiles.remove(filePath)
-        self.recentFiles.insert(0, filePath)
-        self.recentFiles = self.recentFiles[:10]
-        self.updateRecentFilesMenu()
+        if filePath not in self.recentFiles:
+            self.recentFiles.append(filePath)
+            self.updateRecentFilesMenu()
 
     def updateRecentFilesMenu(self):
         self.recentFilesMenu.clear()
@@ -639,24 +834,23 @@ class WebAutomationTool(QMainWindow):
             self.recentFilesMenu.addAction(action)
 
     def openRecentFile(self, filePath):
-        with open(filePath, "r") as file:
-            self.steps = json.load(file)
-            self.stepsList.clear()
-            for step in self.steps:
-                display_text = f'{step[0]}: {step[1]}, Text: {step[2]}, Description: {step[3]}'
-                if step[0] == 'Sleep':
-                    display_text = f'{step[0]}: Sleep for {step[1]} seconds, Description: {step[3]}'
-                self.stepsList.addItem(display_text)
-            self.updateRecentFiles(filePath)
+        try:
+            with open(filePath, "r") as file:
+                self.steps = json.load(file)
+                self.stepsList.clear()
+                for step in self.steps:
+                    display_text = self.constructStepDisplayText(step)
+                    self.stepsList.addItem(display_text)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to open file: {e}")
 
     def loadRecentFiles(self):
-        try:
+        if os.path.exists('recent_files.json'):
             with open('recent_files.json', 'r') as file:
                 self.recentFiles = json.load(file)
-        except (FileNotFoundError, json.JSONDecodeError):
-            self.recentFiles = []
+                self.updateRecentFilesMenu()
 
-        self.updateRecentFilesMenu()
+        self.logger.info("Loaded recent files.")
 
     def closeEvent(self, event):
         self.saveRecentFiles()
@@ -665,6 +859,75 @@ class WebAutomationTool(QMainWindow):
     def saveRecentFiles(self):
         with open('recent_files.json', 'w') as file:
             json.dump(self.recentFiles, file)
+
+    def extractWebElements(self):
+        url, ok = QInputDialog.getText(self, 'Extract Web Elements', 'Enter the URL:')
+        if ok and url:
+            try:
+                elements_data = extract_elements_to_json(url)
+                self.showExtractionResult(elements_data)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to extract elements: {e}")
+
+    def showExtractionResult(self, elements_data):
+        self.resultsWindow = QDialog(self, Qt.Window)
+        self.resultsWindow.setWindowTitle("Extraction Results")
+        resultsLayout = QVBoxLayout()
+
+        self.urlInputField = QLineEdit(self.resultsWindow)
+        self.urlInputField.setPlaceholderText('Enter URL')
+        resultsLayout.addWidget(self.urlInputField)
+
+        searchButton = QPushButton('Extract Web Elements', self.resultsWindow)
+        searchButton.clicked.connect(self.onSearchClicked)
+        resultsLayout.addWidget(searchButton)
+
+        self.resultsTable = QTableWidget()
+        self.updateResultsTable(elements_data)
+        resultsLayout.addWidget(self.resultsTable)
+
+        self.resultsWindow.setLayout(resultsLayout)
+        self.resultsWindow.resize(600, 400)
+        self.resultsWindow.show()
+
+    def updateResultsTable(self, elements_data):
+        self.resultsTable.setColumnCount(2)
+        self.resultsTable.setHorizontalHeaderLabels(['Value', 'Locators'])
+        self.resultsTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.resultsTable.verticalHeader().setVisible(False)
+        self.resultsTable.setEditTriggers(QTableWidget.NoEditTriggers)
+
+        self.resultsTable.setRowCount(len(elements_data))
+        for row, element in enumerate(elements_data):
+            self.resultsTable.setRowHeight(row, 45)
+            self.resultsTable.setItem(row, 0, QTableWidgetItem(element['value']))
+            comboBox = QComboBox()
+            for locator in element['locators']:
+                comboBox.addItem(f"XPath: {locator['xpath']}")
+                for attr, value in locator['attributes'].items():
+                    comboBox.addItem(f"{attr}: {value}")
+            self.resultsTable.setCellWidget(row, 1, comboBox)
+
+    def onSearchClicked(self):
+        url = self.urlInputField.text()
+        if url:
+            self.statusBar.showMessage("Extracting all web elements...")
+            QApplication.processEvents()
+
+            try:
+                elements_data = extract_elements_to_json(url)
+                self.updateResultsTable(elements_data)
+                self.statusBar.clearMessage()
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to extract elements: {e}")
+                self.statusBar.clearMessage()
+
+    def contextMenuEvent(self, event, comboBox):
+        menu = QMenu()
+        copyAction = QAction("Copy", self)
+        copyAction.triggered.connect(lambda: QApplication.clipboard().setText(comboBox.currentText().split(": ")[-1]))
+        menu.addAction(copyAction)
+        menu.exec_(event.globalPos())
 
 
 if __name__ == '__main__':

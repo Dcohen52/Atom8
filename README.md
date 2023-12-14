@@ -74,9 +74,13 @@ Atom8's versatility makes it an invaluable tool for businesses, researchers, mar
 
 ## Screenshots
 
-![img.png](img.png)
+![image](https://github.com/Dcohen52/Atom8/assets/26333525/1a9830ad-37d8-4002-8510-a1987dcc7ce3)
 
-![img_2.png](img_2.png)
+![image](https://github.com/Dcohen52/Atom8/assets/26333525/b8b0be59-36ea-4bd3-aebd-cb68374e7334)
+
+
+
+
 
 ## License
 

@@ -3,14 +3,11 @@ import sys
 import os
 import logging
 import time
-import subprocess
-
-import requests
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QSize, QRect
+from PyQt5.QtGui import QColor, QTextFormat, QPainter
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLineEdit, QLabel, QComboBox, \
     QListWidget, QHBoxLayout, QAction, QMessageBox, QFileDialog, QStatusBar, QCheckBox, QTextEdit, QInputDialog, \
-    QDialog, QTableWidgetItem, QTableWidget, QMenu, QHeaderView
-from bs4 import BeautifulSoup
+    QDialog, QTableWidgetItem, QTableWidget, QMenu, QHeaderView, QPlainTextEdit
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -29,6 +26,90 @@ class QTextEditLogger(logging.Handler):
         self.widget.append(msg)
 
 
+class LineNumberArea(QWidget):
+    def __init__(self, editor):
+        super().__init__(editor)
+        self.codeEditor = editor
+
+    def sizeHint(self):
+        return QSize(self.codeEditor.lineNumberAreaWidth(), 0)
+
+    def paintEvent(self, event):
+        self.codeEditor.lineNumberAreaPaintEvent(event)
+
+
+class ScriptEditor(QPlainTextEdit):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.lineNumberArea = LineNumberArea(self)
+
+        self.blockCountChanged.connect(self.updateLineNumberAreaWidth)
+        self.updateRequest.connect(self.updateLineNumberArea)
+        self.cursorPositionChanged.connect(self.highlightCurrentLine)
+        self.updateLineNumberAreaWidth(0)
+
+    def lineNumberAreaWidth(self):
+        digits = 1
+        max_count = max(1, self.blockCount())
+        while max_count >= 10:
+            max_count /= 10
+            digits += 1
+        space = 3 + self.fontMetrics().width('9') * digits
+        return space
+
+    def updateLineNumberAreaWidth(self, _):
+        self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
+
+    def updateLineNumberArea(self, rect, dy):
+        if dy:
+            self.lineNumberArea.scroll(0, dy)
+        else:
+            self.lineNumberArea.update(0, rect.y(), self.lineNumberArea.width(), rect.height())
+
+        if rect.contains(self.viewport().rect()):
+            self.updateLineNumberAreaWidth(0)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        cr = self.contentsRect()
+        self.lineNumberArea.setGeometry(QRect(cr.left(), cr.top(), self.lineNumberAreaWidth(), cr.height()))
+
+    def lineNumberAreaPaintEvent(self, event):
+        painter = QPainter(self.lineNumberArea)
+        painter.fillRect(event.rect(), Qt.lightGray)
+
+        block = self.firstVisibleBlock()
+        block_number = block.blockNumber()
+        top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
+        bottom = top + self.blockBoundingRect(block).height()
+
+        while block.isValid() and top <= event.rect().bottom():
+            if block.isVisible() and bottom >= event.rect().top():
+                number = str(block_number + 1)
+                painter.setPen(Qt.black)
+                painter.drawText(0, top, self.lineNumberArea.width(), self.fontMetrics().height(),
+                                 Qt.AlignRight, number)
+
+            block = block.next()
+            top = bottom
+            bottom = top + self.blockBoundingRect(block).height()
+            block_number += 1
+
+    def highlightCurrentLine(self):
+        extraSelections = []
+
+        if not self.isReadOnly():
+            selection = QTextEdit.ExtraSelection()
+            lineColor = QColor(Qt.yellow).lighter(160)
+            selection.format.setBackground(lineColor)
+            selection.format.setProperty(QTextFormat.FullWidthSelection, True)
+            selection.cursor = self.textCursor()
+            selection.cursor.clearSelection()
+            extraSelections.append(selection)
+
+        self.setExtraSelections(extraSelections)
+
+
 class WebAutomationTool(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -41,6 +122,7 @@ class WebAutomationTool(QMainWindow):
         self.loadRecentFiles()
         self.currentFilePath = None
         self.resultsTable = None
+        self.setupScriptEditor()
 
     def initUI(self):
 
@@ -263,6 +345,10 @@ class WebAutomationTool(QMainWindow):
         extractElementsAction.setShortcut('Ctrl+E')
         toolsMenu.addAction(extractElementsAction)
 
+        scriptEditorAction = QAction('Script Editor', self)
+        scriptEditorAction.triggered.connect(self.showScriptEditor)
+        toolsMenu.addAction(scriptEditorAction)
+
         aboutAction = QAction('About', self)
         aboutAction.triggered.connect(self.showAboutDialog)
         helpMenu.addAction(aboutAction)
@@ -281,14 +367,14 @@ class WebAutomationTool(QMainWindow):
             self.logger.info(f"Added step: {display_txt}")
         elif action in ['Click Element', 'Input Text']:
             step = (action, locator_type, locator_value, text_value, description_value)
-            display_txt = f'{action}: {locator_value if locator_value else text_value} (Locator: {locator_type if locator_type != "Select Locator" else "N/A"}), Description: {"N/A" if not description_value else description_value})'
+            display_txt = f'{action}: (By: {locator_type if locator_type != "Select Locator" else "N/A"}, {locator_value}){", Text: " + text_value if text_value else ""}, Description: {description_value}'
             self.logger.info(f"Added step: {display_txt}")
         elif action in ['Navigate to URL', 'Execute JavaScript', 'Execute Python Script']:
-            step = action
+            step = (action, text_value, description_value)
             display_txt = f'{action}: {text_value}{"." if not description_value else f", Description: {description_value}"}'
             self.logger.info(f"Added step: {display_txt}")
         elif action == 'Maximize Window':
-            step = action
+            step = (action,)
             display_txt = f'Maximize Window.'
             self.logger.info(f"Added step: {display_txt}")
         elif action == 'Take Screenshot':
@@ -493,7 +579,8 @@ class WebAutomationTool(QMainWindow):
                     else:
                         element.send_keys(step[3])
                 elif action == 'Take Screenshot':
-                    self.driver.save_screenshot(step[1])
+                    screenshot_name = f"{step[1]}{'.png' if not step[1].endswith('.png') else ''}"
+                    self.driver.save_screenshot(screenshot_name)
                 elif action == 'Execute JavaScript':
                     self.driver.execute_script(step[1])
                 elif action == 'Sleep':
@@ -548,18 +635,18 @@ class WebAutomationTool(QMainWindow):
             self.updateRecentFiles(fileName)
             with open(fileName, "w+") as file:
                 json.dump(self.steps, file)
-            self.statusBar.showMessage("File saved as new file.", 5000)
+            self.statusBar.showMessage(f"File saved as {fileName} successfully.", 5000)
 
     def realSaveFile(self):
         if self.currentFilePath:
             with open(self.currentFilePath, "w") as file:
                 json.dump(self.steps, file)
-            self.statusBar.showMessage("File saved successfully.", 5000)
+            self.statusBar.showMessage(f"File {self.currentFilePath} saved successfully.", 5000)
         else:
             self.saveFile()
 
     def openFile(self):
-        fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "All Files (*);;Atom8 Files (*.atm8)")
+        fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "Atom8 Files (*.atm8)")
         if fileName:
             self.currentFilePath = fileName
             self.updateRecentFiles(fileName)
@@ -584,16 +671,18 @@ class WebAutomationTool(QMainWindow):
         try:
             action = step[0]
             if action == 'Sleep':
-                return f'Sleep for {step[1]} seconds.'
-            elif action in ['Click Element', 'Input Text', 'Take Screenshot']:
-                locator_type, locator_value, text_value, description = step[1], step[2], step[3], step[4]
-                return f'{action}: {locator_value} (Locator: {locator_type}), Text: {text_value}, Description: {description}'
+                display_text = f'Sleep for {step[1]} seconds.'
+            elif action in ['Click Element', 'Input Text']:
+                display_text = f'{action}: (By: {step[1]}, {step[2]}){", Text: " + step[3] if step[3] else ""}, Description: {step[4]}'
             elif action in ['Navigate to URL', 'Execute JavaScript', 'Execute Python Script']:
-                return f'{action}: {step[1]}, Description: {step[2]}'
+                display_text = f'{action}: {step[1]}{"." if not step[2] else f", Description: {step[2]}"}'
+            elif action == 'Take Screenshot':
+                display_text = f'Take screenshot and save as {step[1]}'
             else:
-                return f'Unknown Action: {action}'
-        except IndexError:
-            return f'Error: Step format incorrect - {step}'
+                display_text = f'{action}'
+        except Exception as e:
+            display_text = f'Error: {e}'
+        return display_text
 
     def clearStepsList(self):
         self.stepsList.clear()
@@ -656,6 +745,87 @@ class WebAutomationTool(QMainWindow):
         except (FileNotFoundError, json.JSONDecodeError):
             self.logger.warning("Failed to load settings file.")
             return {}
+
+    def setupScriptEditor(self):
+        self.scriptEditorWindow = QMainWindow(self)
+        self.scriptEditorWindow.setWindowTitle("AQL Script Editor")
+        self.scriptEditorWindow.setGeometry(100, 100, 600, 400)
+
+        self.scriptEditor = QTextEdit(self.scriptEditorWindow)
+        self.scriptEditor.setPlaceholderText("Enter AQL script here...")
+        self.scriptEditor.setReadOnly(False)
+        self.scriptEditorWindow.setCentralWidget(self.scriptEditor)
+
+        self.scriptEditorStatusBar = QStatusBar()
+        self.scriptEditorWindow.setStatusBar(self.scriptEditorStatusBar)
+
+        self.scriptEditorMenuBar = self.scriptEditorWindow.menuBar()
+        self.scriptEditorFileMenu = self.scriptEditorMenuBar.addMenu('File')
+
+        self.scriptEditorOpenAction = QAction('Open', self)
+        self.scriptEditorOpenAction.triggered.connect(self.openScriptFile)
+
+        self.scriptEditorSaveAction = QAction('Save', self)
+        self.scriptEditorSaveAction.triggered.connect(self.saveScriptFile)
+
+        self.scriptEditorSaveAsAction = QAction('Save As', self)
+        self.scriptEditorSaveAsAction.triggered.connect(self.saveScriptFileAs)
+
+        self.scriptEditorClearAction = QAction('Clear', self)
+        self.scriptEditorClearAction.triggered.connect(self.clearScriptEditor)
+
+        self.scriptEditorCloseAction = QAction('Close', self)
+        self.scriptEditorCloseAction.triggered.connect(self.closeScriptEditor)
+
+        self.scriptEditorFileMenu.addAction(self.scriptEditorOpenAction)
+        self.scriptEditorFileMenu.addAction(self.scriptEditorSaveAction)
+        self.scriptEditorFileMenu.addAction(self.scriptEditorSaveAsAction)
+        self.scriptEditorFileMenu.addAction(self.scriptEditorClearAction)
+        self.scriptEditorFileMenu.addAction(self.scriptEditorCloseAction)
+
+        self.scriptEditorStatusBar.showMessage("Ready", 5000)
+
+        self.scriptEditorLogger = logging.getLogger('ScriptEditor')
+        self.scriptEditorLogger.setLevel(logging.INFO)
+
+        self.scriptEditorLoggerTextBox = QTextEditLogger(self.scriptEditor)
+        self.scriptEditorLoggerTextBox.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        self.scriptEditorLogger.addHandler(self.scriptEditorLoggerTextBox)
+        self.scriptEditorLogger.setLevel(logging.DEBUG)
+
+    def openScriptFile(self):
+        fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "All Files (*);;AQL Files (*.aql)")
+        if fileName:
+            try:
+                with open(fileName, "r") as file:
+                    self.scriptEditor.setText(file.read())
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to open file: {e}")
+
+    def saveScriptFile(self):
+        if self.currentFilePath:
+            with open(self.currentFilePath, "w") as file:
+                file.write(self.scriptEditor.toPlainText())
+            self.scriptEditorStatusBar.showMessage("File saved successfully.", 5000)
+        else:
+            self.saveScriptFileAs()
+
+    def saveScriptFileAs(self):
+        fileName, _ = QFileDialog.getSaveFileName(self, "Save As", "", "AQL Files (*.aql)")
+        if fileName:
+            self.currentFilePath = fileName
+            with open(fileName, "w+") as file:
+                file.write(self.scriptEditor.toPlainText())
+            self.scriptEditorStatusBar.showMessage("File saved as new file.", 5000)
+
+    def clearScriptEditor(self):
+        self.scriptEditor.clear()
+
+    def closeScriptEditor(self):
+        self.scriptEditorWindow.close()
+
+    def showScriptEditor(self):
+        self.scriptEditorWindow.show()
 
     def newFile(self):
         if self.steps:

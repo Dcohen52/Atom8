@@ -4,6 +4,9 @@ import json
 
 
 def get_xpath(element):
+    """
+    Generate XPath for a BeautifulSoup element.
+    """
     components = []
     child = element if element.name else element.parent
     for parent in child.parents:

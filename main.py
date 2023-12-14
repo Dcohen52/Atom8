@@ -615,15 +615,13 @@ class WebAutomationTool(QMainWindow):
         </head>
         <body>
             <h2>Atom8 - Advanced Web Automation Tool</h2>
-            <p><strong>Version:</strong> 0.1</p>
-            <p>Atom8 is an advanced web automation tool designed for efficiency and ease of use. Ideal for both professionals and hobbyists, it simplifies complex web tasks through its advanced technology, offering a seamless automation experience. Atom8 excels in a wide range of applications from data scraping to intricate testing workflows.</p>
-            <p>Atom8 is built on top of Selenium, a popular web automation framework. It is designed to be a user-friendly alternative to Selenium, offering a simple and intuitive interface for creating and running, simple and complex automation tasks.</p>
+            <p><strong>Version:</strong> 1.0-dev</p>
+            <p>Atom8 is a robust and user-friendly web automation tool, offering enhanced capabilities for both professionals and enthusiasts. This tool streamlines complex web tasks, providing an advanced yet seamless automation experience. It's perfect for a variety of applications, including data scraping, automated testing, and more.</p>
+            <p>Built upon the popular Selenium framework, Atom8 stands out as a more accessible alternative, boasting a straightforward interface for creating and executing both simple and complex automation scripts.</p>
+            <p>Explore more about Atom8, get the latest updates, and access support on our GitHub page: <a href="https://github.com/Dcohen52/Atom8" target="_blank">Atom8 GitHub Repository</a>.</p>
             <p><strong>Created by:</strong> Dekel Cohen</p>
             <p><strong>License:</strong> MIT License</p>
-
-            <p>Discover more about Atom8, get updates, and access support on our GitHub page: <a href="https://github.com/Dcohen52/Atom8" target="_blank">Atom8 GitHub Repository</a>.</p>
-
-            <p><strong>Disclaimer:</strong> Atom8 is an independent project, not officially affiliated with or endorsed by the Selenium project or its associates.</p>
+            <p><strong>Disclaimer:</strong> Atom8 is an independent project and is not officially affiliated with or endorsed by the Selenium project or its associates.</p>
         </body>
         </html>
         """)

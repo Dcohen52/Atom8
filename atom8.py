@@ -7,12 +7,40 @@ from PyQt5.QtCore import Qt, QSize, QRect
 from PyQt5.QtGui import QColor, QTextFormat, QPainter
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLineEdit, QLabel, QComboBox, \
     QListWidget, QHBoxLayout, QAction, QMessageBox, QFileDialog, QStatusBar, QCheckBox, QTextEdit, QInputDialog, \
-    QDialog, QTableWidgetItem, QTableWidget, QMenu, QHeaderView, QPlainTextEdit
+    QDialog, QTableWidgetItem, QTableWidget, QMenu, QHeaderView, QPlainTextEdit, QTabWidget, QGroupBox, QGridLayout, \
+    QScrollArea
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.edge.options import Options as EdgeOptions
 
 from helper import extract_elements_to_json
+
+
+class CustomComboBox(QComboBox):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.showContextMenu)
+
+    def showContextMenu(self, position):
+        menu = QMenu()
+        copyAction = menu.addAction("Copy")
+        action = menu.exec_(self.mapToGlobal(position))
+        if action == copyAction:
+            self.copyToClipboard()
+
+    def copyToClipboard(self):
+        text = self.currentText()
+        # Split the text at the colon and take the part after it
+        parts = text.split(":", 1)
+        if len(parts) == 2:
+            text_to_copy = parts[1].strip()  # Remove leading/trailing whitespace
+        else:
+            text_to_copy = text  # Fallback to the entire text if no colon found
+
+        clipboard = QApplication.clipboard()
+        clipboard.setText(text_to_copy)
 
 
 class QTextEditLogger(logging.Handler):
@@ -110,7 +138,7 @@ class ScriptEditor(QPlainTextEdit):
         self.setExtraSelections(extraSelections)
 
 
-class WebAutomationTool(QMainWindow):
+class Atom8(QMainWindow):
     def __init__(self):
         super().__init__()
         self.driver = None
@@ -186,7 +214,10 @@ class WebAutomationTool(QMainWindow):
         }
 
         QComboBox::down-arrow {
-            image: url(/path/to/your/down-arrow-icon.png);
+            image: url(assets/drop-down-arrow.png);
+            padding-right: 20px;
+            width: 10px;
+            height: 10px;
         }
 
         QComboBox QAbstractItemView {
@@ -256,11 +287,44 @@ class WebAutomationTool(QMainWindow):
             background-color: #0069D9;
             color: white;
         }
+        
+        QGroupBox {
+            background-color: #FFFFFF;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+        }
+        
+        QScrollArea {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        QScrollBar:vertical {
+            border: none;
+            background: #EEEEEE;
+            width: 10px;
+            margin: 10px 0 10px 0;
+        }
+        QScrollBar::handle:vertical {
+            background: #d1d1d1;
+            min-height: 20px;
+            border-radius: 4px;
+        }
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+            border: none;
+            background: none;
+        }
+        QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
+            border: none;
+            background: none;
+        }
+        QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+            background: none;
+        }
         """
 
         self.setWindowTitle('Atom8')
-        self.setGeometry(100, 100, 800, 600)
-
+        self.setGeometry(100, 100, 800, 800)
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
 
@@ -269,27 +333,95 @@ class WebAutomationTool(QMainWindow):
         self.setupActionSelection(mainLayout)
         self.setupButtonsAndStepsList(mainLayout)
 
-        self.headlessCheckbox = QCheckBox("Headless Mode", self)
-        self.headlessCheckbox.setChecked(False)
-        mainLayout.addWidget(self.headlessCheckbox)
-        self.headlessCheckbox.setToolTip("Run the browser in the background without GUI")
+        mainTabWidget = QTabWidget(self)
+        mainLayout.addWidget(mainTabWidget)
 
+        logViewerTab = QWidget()
+        logViewerLayout = QVBoxLayout(logViewerTab)
         self.logViewer = QTextEdit(self)
         self.logViewer.setReadOnly(True)
-        mainLayout.addWidget(self.logViewer)
+        logViewerLayout.addWidget(self.logViewer)
 
         buttonsLayout = QHBoxLayout()
         self.saveLogsButton = QPushButton('Save Logs', self)
         self.saveLogsButton.clicked.connect(self.saveLogs)
         buttonsLayout.addWidget(self.saveLogsButton)
-
         self.clearLogsButton = QPushButton('Clear Logs', self)
         self.clearLogsButton.clicked.connect(self.clearLogs)
         buttonsLayout.addWidget(self.clearLogsButton)
+        logViewerLayout.addLayout(buttonsLayout)
+        mainTabWidget.addTab(logViewerTab, "Log Viewer")
 
-        mainLayout.addLayout(buttonsLayout)
+        # Browser options tab
+        browserOptionsTab = QWidget()
+        browserOptionsLayout = QVBoxLayout(browserOptionsTab)
+        mainTabWidget.addTab(browserOptionsTab, "Browser Options")
+
+        # Basic options group within a scrollable area
+        basicOptionsScrollArea = QScrollArea()
+        basicOptionsScrollArea.setWidgetResizable(True)
+        basicOptionsScrollArea.setMaximumHeight(130)  # Set maximum height
+        basicOptionsGroup = QGroupBox("Basic Options")
+        basicOptionsLayout = QVBoxLayout(basicOptionsGroup)
+        basicOptionsScrollArea.setWidget(basicOptionsGroup)
+        browserOptionsLayout.addWidget(basicOptionsScrollArea)
+
+        # List of basic options
+        basicOptions = [
+            ("Headless Mode", "Run the browser in the background without GUI"),
+            ("Disable GPU", "Disable GPU acceleration"),
+            ("Incognito Mode", "Run browser in incognito/private mode"),
+            ("Disable Popup Blocking", "Disable popup blocking feature"),
+            ("Disable Infobars", "Disable infobars in the browser"),
+            ("Disable Extensions", "Disable extensions in the browser"),
+        ]
+
+        for option in basicOptions:
+            checkbox = self.createCheckbox(option[0], option[1])
+            basicOptionsLayout.addWidget(checkbox)
+
+            # Advanced options group within a scrollable area
+        advancedOptionsScrollArea = QScrollArea()
+        advancedOptionsScrollArea.setWidgetResizable(True)
+        advancedOptionsScrollArea.setMaximumHeight(130)  # Set maximum height
+        advancedOptionsGroup = QGroupBox("Advanced Options")
+        advancedOptionsLayout = QVBoxLayout(advancedOptionsGroup)
+        advancedOptionsScrollArea.setWidget(advancedOptionsGroup)
+        browserOptionsLayout.addWidget(advancedOptionsScrollArea)
+
+        # List of advanced options
+        advancedOptions = [
+            ("Disable Dev Shm Usage", "Disable Dev Shm Usage (Chrome only)"),
+            ("Ignore Certificate Errors", "Ignore SSL certificate errors"),
+            ("Custom User Agent", "Set a custom user agent string"),
+            ("Disable JavaScript", "Disable JavaScript execution in the browser"),
+            ("Disable Images", "Disable image loading in the browser"),
+            ("Enable Network Throttling", "Simulate different network conditions"),
+            ("Enable Performance Logging", "Enable logging of performance metrics"),
+            ("Enable GPU Hardware Acceleration", "Enable GPU hardware acceleration"),
+            ("Remote Debugging Port", "Set a remote debugging port"),
+            ("Proxy Settings", "Configure proxy settings for the browser"),
+            ("Enable Automation", "Enable automation flags in the browser"),
+            ("No Sandbox", "Disable the sandbox for elevated privileges"),
+            ("Disable Web Security", "Disable web security features"),
+            ("Enable Experimental Features", "Enable experimental features in the browser"),
+            ("Disable Password Manager", "Disable the browser's password manager"),
+            ("Disable Autofill", "Disable form autofill in the browser"),
+            ("Disable Filesystem API", "Disable the Filesystem API"),
+            ("Disable Geolocation", "Disable geolocation features"),
+        ]
+
+        for option in advancedOptions:
+            checkbox = self.createCheckbox(option[0], option[1])
+            advancedOptionsLayout.addWidget(checkbox)
+
+        # Browser label
+        self.browserLabel = QLabel("Browser: " + self.loadSetting("defaultBrowser", "Chrome"))
+        self.browserLabel.setStyleSheet("margin-top: 10px; margin-bottom: 10px;")
+        mainLayout.addWidget(self.browserLabel)
+
+        # Set main layout
         self.setStyleSheet(style)
-
         centralWidget = QWidget()
         centralWidget.setLayout(mainLayout)
         self.setCentralWidget(centralWidget)
@@ -348,10 +480,20 @@ class WebAutomationTool(QMainWindow):
         scriptEditorAction = QAction('Script Editor', self)
         scriptEditorAction.triggered.connect(self.showScriptEditor)
         toolsMenu.addAction(scriptEditorAction)
+        scriptEditorAction.setShortcut('Ctrl+Shift+E')
+        scriptEditorAction.setDisabled(True)
 
         aboutAction = QAction('About', self)
         aboutAction.triggered.connect(self.showAboutDialog)
         helpMenu.addAction(aboutAction)
+
+        helpAction = QAction('Help', self)
+        helpAction.triggered.connect(self.showHelpDialog)
+        helpMenu.addAction(helpAction)
+
+        howToUseAction = QAction('How to use', self)
+        howToUseAction.triggered.connect(self.howToUseDialog)
+        helpMenu.addAction(howToUseAction)
 
     def addStep(self):
         action = self.actionSelection.currentText()
@@ -390,6 +532,17 @@ class WebAutomationTool(QMainWindow):
 
         self.steps.append(step)
         self.stepsList.addItem(display_txt)
+        # Clear input fields after adding the step
+        self.locatorInput.clear()
+        self.inputText.clear()
+        self.sleepInput.clear()
+        self.inputDescription.clear()
+
+    def createCheckbox(self, label, tooltip):
+        checkbox = QCheckBox(label, self)
+        checkbox.setChecked(False)
+        checkbox.setToolTip(tooltip)
+        return checkbox
 
     def setupActionSelection(self, layout):
         self.actionSelection = QComboBox(self)
@@ -547,55 +700,140 @@ class WebAutomationTool(QMainWindow):
             self.inputText.setPlaceholderText("Enter Text")
 
     def startAutomation(self):
-        chrome_options = Options()
-        if self.headlessCheckbox.isChecked():
-            chrome_options.add_argument("--headless")
-
-        self.driver = webdriver.Chrome(options=chrome_options)
-
-        locator_strategies = {
-            'XPath': By.XPATH,
-            'CSS Selector': By.CSS_SELECTOR,
-            'ID': By.ID,
-            'Name': By.NAME,
-            'Class Name': By.CLASS_NAME,
-            'Tag Name': By.TAG_NAME,
-            'Link Text': By.LINK_TEXT,
-            'Partial Link Text': By.PARTIAL_LINK_TEXT
+        chromeOptionsMapping = {
+            "Headless Mode": "--headless",
+            "Disable GPU": "--disable-gpu",
+            "Incognito Mode": "--incognito",
+            "Disable Popup Blocking": "--disable-popup-blocking",
+            "Disable Infobars": "--disable-infobars",
+            "Disable Extensions": "--disable-extensions",
+            "Disable Dev Shm Usage": "--disable-dev-shm-usage",
+            "Ignore Certificate Errors": "--ignore-certificate-errors",
+            "Custom User Agent": "--user-agent",
+            "Disable JavaScript": "--disable-javascript",
+            "Disable Images": "--blink-settings=imagesEnabled=false",
+            "Enable Network Throttling": "--enable-network-throttling",
+            "Enable Performance Logging": "--enable-performance-logging",
+            "Enable GPU Hardware Acceleration": "--enable-gpu-rasterization",
+            "Remote Debugging Port": "--remote-debugging-port",
+            "Proxy Settings": "--proxy-server",
+            "Enable Automation": "--enable-automation",
+            "No Sandbox": "--no-sandbox",
+            "Disable Web Security": "--disable-web-security",
+            "Enable Experimental Features": "--enable-experimental-web-platform-features",
+            "Disable Password Manager": "--disable-password-manager-reauthentication",
+            "Disable Autofill": "--disable-autofill-keyboard-accessory-view",
+            "Disable Filesystem API": "--disable-filesystem",
+            "Disable Geolocation": "--disable-geolocation",
         }
 
-        for step in self.steps:
-            action = step[0]
+        edgeOptionsMapping = {
+            "Headless Mode": "headless",
+            "Disable GPU": "disable-gpu",
+            "InPrivate Mode": "InPrivate",
+            "Disable Popup Blocking": "disable-popup-blocking",
+            "Disable Extensions": "disable-extensions",
+            "Ignore Certificate Errors": "ignore-certificate-errors",
+            "Custom User Agent": "user-agent",
+            "Disable JavaScript": "disable-javascript",
+            "Disable Images": "disable-images",
+            "Enable Network Throttling": "enable-network-throttling",
+            "Enable Performance Logging": "enable-performance-logging",
+            "Enable GPU Hardware Acceleration": "enable-gpu-rasterization",
+            "Remote Debugging Port": "remote-debugging-port",
+            "Proxy Settings": "proxy-server",
+            "Enable Automation": "enable-automation",
+            "No Sandbox": "no-sandbox",
+            "Disable Web Security": "disable-web-security",
+            "Enable Experimental Features": "enable-experimental-web-platform-features",
+            "Disable Password Manager": "disable-password-manager",
+            "Disable Autofill": "disable-autofill",
+            "Disable Filesystem API": "disable-filesystem",
+            "Disable Geolocation": "disable-geolocation",
+        }
 
-            try:
-                if action == 'Navigate to URL':
-                    self.driver.get(step[1])
-                elif action in ['Click Element', 'Input Text']:
-                    locator_type = step[1]
-                    locator_value = step[2]
-                    element = self.driver.find_element(locator_strategies[locator_type], locator_value)
-                    if action == 'Click Element':
-                        element.click()
-                    else:
-                        element.send_keys(step[3])
-                elif action == 'Take Screenshot':
-                    screenshot_name = f"{step[1]}{'.png' if not step[1].endswith('.png') else ''}"
-                    self.driver.save_screenshot(screenshot_name)
-                elif action == 'Execute JavaScript':
-                    self.driver.execute_script(step[1])
-                elif action == 'Sleep':
-                    time.sleep(float(step[1]))
-                elif action == 'Maximize Window':
-                    self.driver.maximize_window()
+        browser_type = self.loadSetting("defaultBrowser", "Chrome")
 
-            except Exception as e:
-                self.logger.error(f"Error in {action}: {e}")
+        chrome_driver_location = self.loadSetting("driverLocation", "chromedriver.exe")
+        msedge_driver_location = self.loadSetting("msedgeLocation", "msedgedriver.exe")
 
-        self.driver.quit()
-        self.logger.info("\n\nOperation completed successfully.\n\n")
+        try:
+            if browser_type == "Chrome":
+                chrome_options = Options()
+                for checkbox in self.findChildren(QCheckBox):
+                    selenium_option = chromeOptionsMapping.get(checkbox.text())
+                    if selenium_option and checkbox.isChecked():
+                        chrome_options.add_argument(selenium_option)
+
+                if not os.path.isfile(chrome_driver_location):
+                    raise ValueError("Invalid Chrome driver location")
+                self.logger.info("Starting Chrome browser with WebDriver at: " + chrome_driver_location)
+                self.driver = webdriver.Chrome(chrome_options)
+            elif browser_type == "Edge":
+                edge_options = EdgeOptions()
+                for checkbox in self.findChildren(QCheckBox):
+                    selenium_option = edgeOptionsMapping.get(checkbox.text())
+                    if selenium_option and checkbox.isChecked():
+                        edge_options.add_argument(selenium_option)
+
+                if not os.path.isfile(msedge_driver_location):
+                    raise ValueError("Invalid Edge driver location")
+                self.logger.info("Starting Edge browser with WebDriver at: " + msedge_driver_location)
+                self.driver = webdriver.Edge(edge_options)
+
+            else:
+                raise ValueError("Unsupported browser type")
+
+            locator_strategies = {
+                'XPath': By.XPATH,
+                'CSS Selector': By.CSS_SELECTOR,
+                'ID': By.ID,
+                'Name': By.NAME,
+                'Class Name': By.CLASS_NAME,
+                'Tag Name': By.TAG_NAME,
+                'Link Text': By.LINK_TEXT,
+                'Partial Link Text': By.PARTIAL_LINK_TEXT
+            }
+
+            for step in self.steps:
+                action = step[0]
+
+                try:
+                    if action == 'Navigate to URL':
+                        self.driver.get(step[1])
+                    elif action in ['Click Element', 'Input Text']:
+                        locator_type = step[1]
+                        locator_value = step[2]
+                        element = self.driver.find_element(locator_strategies[locator_type], locator_value)
+                        if action == 'Click Element':
+                            element.click()
+                        else:
+                            element.send_keys(step[3])
+                    elif action == 'Take Screenshot':
+                        screenshot_filename = f"{step[1]}{'.png' if not step[1].endswith('.png') else ''}"
+                        save_path = self.loadSetting("savePath", "")
+                        if not save_path or not os.path.exists(save_path):
+                            save_path = os.getcwd()
+                        full_screenshot_path = os.path.join(save_path, screenshot_filename)
+                        self.driver.save_screenshot(full_screenshot_path)
+                    elif action == 'Execute JavaScript':
+                        self.driver.execute_script(step[1])
+                    elif action == 'Sleep':
+                        time.sleep(float(step[1]))
+                    elif action == 'Maximize Window':
+                        self.driver.maximize_window()
+
+                except Exception as e:
+                    self.logger.error(f"Error in {action}: {e}")
+
+            self.driver.quit()
+            self.logger.info("\n\nOperation completed successfully.\n\n")
+        except Exception as e:
+            self.logger.error(f"Error in starting the browser: {e}")
+            raise
 
     def setupLogging(self):
-        self.logger = logging.getLogger('WebAutomationTool')
+        self.logger = logging.getLogger('Atom8')
         logging.basicConfig(level=logging.INFO)
 
         logTextBox = QTextEditLogger(self.logViewer)
@@ -622,6 +860,59 @@ class WebAutomationTool(QMainWindow):
             <p><strong>Created by:</strong> Dekel Cohen</p>
             <p><strong>License:</strong> MIT License</p>
             <p><strong>Disclaimer:</strong> Atom8 is an independent project and is not officially affiliated with or endorsed by the Selenium project or its associates.</p>
+        </body>
+        </html>
+        """)
+
+    def showHelpDialog(self):
+        # help the user to get the drivers
+        QMessageBox.about(self, "Help", """
+        <html>
+        <head>
+            <style>
+                p { font-family: Arial, sans-serif; line-height: 1.6; }
+                a { text-decoration: none; color: #007BFF; }
+                a:hover { text-decoration: underline; }
+            </style>
+        </head>
+        <body>
+            <h2>Help</h2>
+            <p><strong>Drivers:</strong> Drivers are required to run the browser. You can download the drivers from the following links:</p>
+            <p><strong>Chrome:</strong> <a href="https://chromedriver.chromium.org/downloads" target="_blank">Chrome Driver</a></p>
+            <p><strong>Edge:</strong> <a href="https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/" target="_blank">Edge Driver</a></p>
+            <p><strong>Firefox:</strong> <a href="" target="_blank">Firefox Driver</a></p>
+            <p><strong>Safari:</strong> <a href="" target="_blank">Safari Driver</a></p>
+            <p><strong>Drivers Location:</strong> After downloading the driver, you need to specify the location of the driver in the preferences menu.</p>
+        </body>
+        </html>
+        """)
+
+    def howToUseDialog(self):
+        QMessageBox.about(self, "How to use", """
+        <html>
+        <head>
+            <style>
+                p { font-family: Arial, sans-serif; line-height: 1.6; }
+                a { text-decoration: none; color: #007BFF; }
+                a:hover { text-decoration: underline; }
+            </style>
+        </head>
+        <body>
+            <h2>How to use</h2>
+            <p><strong>Build Script:</strong> You can build the script by adding steps to the steps list.</p>
+            <p><strong>Add Step:</strong> You can add a step by selecting the action, filling the fields and clicking the add step button.</p>
+            <p><strong>Remove Step:</strong> You can remove a step by selecting the step and clicking the remove step button.</p>
+            <p><strong>Edit Step:</strong> You can edit a step by selecting the step and clicking the edit step button.</p>
+            <p><strong>Save Script:</strong> You can save the script by clicking the save button.</p>
+            <p><strong>Open Existing Script:</strong> You can open the script by clicking the open button.</p>
+            <hr>
+            <p><strong>Preferred Browser:</strong> You can choose the browser you want to use in the preferences menu.</p>
+            <p><strong>Save Path:</strong> You can choose the default save path for the screenshots in the preferences menu.</p>
+            <p><strong>Save Logs:</strong> You can save the logs in the log viewer tab.</p>
+            <p><strong>Clear Logs:</strong> You can clear the logs in the log viewer tab.</p>
+            <p><strong>Preferences:</strong> You can change the preferences in the preferences menu.</p>
+            <p><strong>Run:</strong> You can run the script by clicking the run button.</p>
+            <p><strong>Log Viewer:</strong> You can view the logs in the log viewer tab.</p>
         </body>
         </html>
         """)
@@ -686,12 +977,14 @@ class WebAutomationTool(QMainWindow):
         self.stepsList.clear()
         self.steps.clear()
         self.clearInputFields()
+        self.clearLogs()
 
     def prefs(self):
         self.prefsWindow = QDialog(self, Qt.Window)
         self.prefsWindow.setWindowTitle("Preferences")
         prefsLayout = QVBoxLayout()
 
+        # Default Browser
         browserLabel = QLabel("Default Browser:")
         self.browserComboBox = QComboBox()
         self.browserComboBox.addItems(["Chrome", "Firefox", "Safari", "Edge"])
@@ -702,47 +995,121 @@ class WebAutomationTool(QMainWindow):
         browserLayout.addWidget(self.browserComboBox)
         prefsLayout.addLayout(browserLayout)
 
-        savePathLabel = QLabel("Default Save Path:")
+        # Default Save Path
+        savePathLabel = QLabel("Default Screenshots Save Path:")
         self.savePathLineEdit = QLineEdit()
-        self.savePathLineEdit.setText(self.loadSetting("savePath", ""))
+        current_save_path = self.loadSetting("savePath", "")
+        if current_save_path:
+            self.savePathLineEdit.setText(current_save_path)
+
+        savePathButton = QPushButton("Choose")
+        savePathButton.clicked.connect(self.chooseSavePathLocation)  # Connect to the directory selection function
+
         savePathLayout = QHBoxLayout()
         savePathLayout.addWidget(savePathLabel)
         savePathLayout.addWidget(self.savePathLineEdit)
+        savePathLayout.addWidget(savePathButton)  # Add the button to the layout
         prefsLayout.addLayout(savePathLayout)
 
+        # Chrome Driver Location
+        driverLocationLabel = QLabel("Chrome Driver Location:")
+        self.driverLocationLineEdit = QLineEdit()
+        self.driverLocationLineEdit.setText(self.loadSetting("driverLocation", ""))
+        driverLocationButton = QPushButton("Choose")
+        driverLocationButton.clicked.connect(self.chooseChromeDriverLocation)
+
+        driverLocationLayout = QHBoxLayout()
+        driverLocationLayout.addWidget(driverLocationLabel)
+        driverLocationLayout.addWidget(self.driverLocationLineEdit)
+        driverLocationLayout.addWidget(driverLocationButton)
+        prefsLayout.addLayout(driverLocationLayout)
+
+        # Edge Driver Location
+        msedgeLocationLabel = QLabel("Edge Driver Location:")
+        self.msedgeLocationLineEdit = QLineEdit()
+        self.msedgeLocationLineEdit.setText(self.loadSetting("msedgeLocation", ""))
+        msedgeLocationButton = QPushButton("Choose")
+        msedgeLocationButton.clicked.connect(self.chooseMsEdgeDriverLocation)
+
+        msedgeLocationLayout = QHBoxLayout()
+        msedgeLocationLayout.addWidget(msedgeLocationLabel)
+        msedgeLocationLayout.addWidget(self.msedgeLocationLineEdit)
+        msedgeLocationLayout.addWidget(msedgeLocationButton)
+        prefsLayout.addLayout(msedgeLocationLayout)
+
+        # Save Button
         saveButton = QPushButton("Save")
         saveButton.clicked.connect(self.savePrefs)
         prefsLayout.addWidget(saveButton)
 
         self.prefsWindow.setLayout(prefsLayout)
-        self.prefsWindow.resize(400, 200)
+        self.prefsWindow.resize(600, 300)
         self.prefsWindow.show()
+
+    def chooseChromeDriverLocation(self):
+        fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "Executable Files (*.exe)")
+        if fileName:
+            self.driverLocationLineEdit.setText(fileName)
+
+    def chooseMsEdgeDriverLocation(self):
+        fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "Executable Files (*.exe)")
+        if fileName:
+            self.msedgeLocationLineEdit.setText(fileName)
+
+    def chooseSavePathLocation(self):
+        directory = QFileDialog.getExistingDirectory(self, "Select Directory")
+        if directory:  # Check if a directory was selected
+            self.savePathLineEdit.setText(directory)
 
     def savePrefs(self):
         self.saveSetting("defaultBrowser", self.browserComboBox.currentText())
         self.saveSetting("savePath", self.savePathLineEdit.text())
+        self.saveSetting("driverLocation", self.driverLocationLineEdit.text())
+        self.saveSetting("msedgeLocation", self.msedgeLocationLineEdit.text())
+
+        self.browserLabel.setText("Browser: " + self.loadSetting("defaultBrowser", "Chrome"))
+
         self.prefsWindow.close()
+
+    def settingsFilePath(self):
+        return os.path.join(os.getenv('APPDATA'), 'Atom8', 'settings.json')
+
+    def recentFilesFilePath(self):
+        return os.path.join(os.getenv('APPDATA'), 'Atom8', 'recent_files.json')
 
     def saveSetting(self, key, value):
         settings = self.loadSettings()
-
         settings[key] = value
-
-        with open('settings.json', 'w') as file:
+        os.makedirs(os.path.dirname(self.settingsFilePath()), exist_ok=True)
+        with open(self.settingsFilePath(), 'w') as file:
             json.dump(settings, file)
 
     def loadSetting(self, key, defaultValue=None):
         settings = self.loadSettings()
-
         return settings.get(key, defaultValue)
 
     def loadSettings(self):
         try:
-            with open('settings.json', 'r') as file:
-                return json.load(file)
+            if os.path.exists(self.settingsFilePath()):
+                with open(self.settingsFilePath(), 'r') as file:
+                    return json.load(file)
+            return {}
         except (FileNotFoundError, json.JSONDecodeError):
             self.logger.warning("Failed to load settings file.")
             return {}
+
+    def loadRecentFiles(self):
+        if os.path.exists(self.recentFilesFilePath()):
+            with open(self.recentFilesFilePath(), 'r') as file:
+                self.recentFiles = json.load(file)
+                self.updateRecentFilesMenu()
+        else:
+            self.recentFiles = []
+
+    def saveRecentFiles(self):
+        os.makedirs(os.path.dirname(self.recentFilesFilePath()), exist_ok=True)
+        with open(self.recentFilesFilePath(), 'w') as file:
+            json.dump(self.recentFiles, file)
 
     def setupScriptEditor(self):
         self.scriptEditorWindow = QMainWindow(self)
@@ -1013,20 +1380,16 @@ class WebAutomationTool(QMainWindow):
             QMessageBox.critical(self, "Error", f"Failed to open file: {e}")
 
     def loadRecentFiles(self):
-        if os.path.exists('recent_files.json'):
-            with open('recent_files.json', 'r') as file:
-                self.recentFiles = json.load(file)
-                self.updateRecentFilesMenu()
-
-        self.logger.info("Loaded recent files.")
-
-    def closeEvent(self, event):
-        self.saveRecentFiles()
-        super().closeEvent(event)
-
-    def saveRecentFiles(self):
-        with open('recent_files.json', 'w') as file:
-            json.dump(self.recentFiles, file)
+        try:
+            if os.path.exists(self.recentFilesFilePath()):
+                with open(self.recentFilesFilePath(), 'r') as file:
+                    self.recentFiles = json.load(file)
+            else:
+                self.recentFiles = []
+            self.updateRecentFilesMenu()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load recent files: {e}")
+            self.recentFiles = []
 
     def extractWebElements(self):
         url, ok = QInputDialog.getText(self, 'Extract Web Elements', 'Enter the URL:')
@@ -1052,11 +1415,30 @@ class WebAutomationTool(QMainWindow):
 
         self.resultsTable = QTableWidget()
         self.updateResultsTable(elements_data)
+        self.resultsTable.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.resultsTable.customContextMenuRequested.connect(self.resultsTableContextMenu)
         resultsLayout.addWidget(self.resultsTable)
 
         self.resultsWindow.setLayout(resultsLayout)
         self.resultsWindow.resize(600, 400)
         self.resultsWindow.show()
+
+    def resultsTableContextMenu(self, position):
+        # Get the row and column number of the clicked cell
+        index = self.resultsTable.indexAt(position)
+        if index.isValid() and index.column() == 1:
+            menu = QMenu()
+            copyAction = menu.addAction("Copy")
+            action = menu.exec_(self.resultsTable.viewport().mapToGlobal(position))
+            if action == copyAction:
+                self.copyLocatorValue(index.row())
+
+    def copyLocatorValue(self, row):
+        comboBox = self.resultsTable.cellWidget(row, 1)  # Get the combobox from the locators column
+        if comboBox:
+            selectedText = comboBox.currentText()
+            clipboard = QApplication.clipboard()
+            clipboard.setText(selectedText)
 
     def updateResultsTable(self, elements_data):
         self.resultsTable.setColumnCount(2)
@@ -1069,7 +1451,7 @@ class WebAutomationTool(QMainWindow):
         for row, element in enumerate(elements_data):
             self.resultsTable.setRowHeight(row, 45)
             self.resultsTable.setItem(row, 0, QTableWidgetItem(element['value']))
-            comboBox = QComboBox()
+            comboBox = CustomComboBox()
             for locator in element['locators']:
                 comboBox.addItem(f"XPath: {locator['xpath']}")
                 for attr, value in locator['attributes'].items():
@@ -1079,7 +1461,6 @@ class WebAutomationTool(QMainWindow):
     def onSearchClicked(self):
         url = self.urlInputField.text()
         if url:
-            self.statusBar.showMessage("Extracting all web elements...")
             QApplication.processEvents()
 
             try:
@@ -1090,16 +1471,9 @@ class WebAutomationTool(QMainWindow):
                 QMessageBox.critical(self, "Error", f"Failed to extract elements: {e}")
                 self.statusBar.clearMessage()
 
-    def contextMenuEvent(self, event, comboBox):
-        menu = QMenu()
-        copyAction = QAction("Copy", self)
-        copyAction.triggered.connect(lambda: QApplication.clipboard().setText(comboBox.currentText().split(": ")[-1]))
-        menu.addAction(copyAction)
-        menu.exec_(event.globalPos())
-
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ex = WebAutomationTool()
+    ex = Atom8()
     ex.show()
     sys.exit(app.exec_())

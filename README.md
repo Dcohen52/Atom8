@@ -1,5 +1,6 @@
 # Atom8
-
+[![Version](https://img.shields.io/badge/1.0-dev-blue)](https://github.com/Dcohen52/Atom8/tree/main)
+[![License](https://img.shields.io/badge/License-MIT-green)](https://mit-license.org/)
 ## Overview
 
 Atom8 is a versatile and powerful web automation tool designed to simplify complex web-based tasks through a user-friendly graphical interface. Leveraging the capabilities of Selenium WebDriver, Atom8 offers a range of functionalities suitable for various automation needs, including web testing, data scraping, and browser automation. Its intuitive design makes it accessible to both beginners and advanced users, allowing for the creation and execution of detailed automation scripts with ease. Atom8 supports major web browsers, offers headless mode operation, and includes advanced features like custom Python script execution, dynamic web element extraction, and comprehensive logging. Whether for professional use in QA testing, automating routine web tasks, or sophisticated web data extraction, Atom8 stands as a versatile tool adaptable to various web automation scenarios. Designed with cross-platform compatibility in mind, Atom8 can be utilized on Windows, Mac, and Linux systems, making it a go-to solution for a wide audience looking to automate and streamline their web-based workflows.

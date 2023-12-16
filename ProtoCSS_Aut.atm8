@@ -1,1 +1,0 @@
-[["Navigate to URL", "https://protocss.dev/", "", "Go to ProtoCSS"], ["Sleep", "2", "", ""], ["Click Element", "//*[@id=\"main\"]/div/div[1]/div[2]/div/a[2]", "", "Press on Features"], ["Sleep", "2", "", ""], ["Take Screenshot", "screenshot1", "", "Take a screenshot of Features page"]]

@@ -32,12 +32,12 @@ class CustomComboBox(QComboBox):
 
     def copyToClipboard(self):
         text = self.currentText()
-        # Split the text at the colon and take the part after it
+
         parts = text.split(":", 1)
         if len(parts) == 2:
-            text_to_copy = parts[1].strip()  # Remove leading/trailing whitespace
+            text_to_copy = parts[1].strip()
         else:
-            text_to_copy = text  # Fallback to the entire text if no colon found
+            text_to_copy = text
 
         clipboard = QApplication.clipboard()
         clipboard.setText(text_to_copy)
@@ -352,21 +352,18 @@ class Atom8(QMainWindow):
         logViewerLayout.addLayout(buttonsLayout)
         mainTabWidget.addTab(logViewerTab, "Log Viewer")
 
-        # Browser options tab
         browserOptionsTab = QWidget()
         browserOptionsLayout = QVBoxLayout(browserOptionsTab)
         mainTabWidget.addTab(browserOptionsTab, "Browser Options")
 
-        # Basic options group within a scrollable area
         basicOptionsScrollArea = QScrollArea()
         basicOptionsScrollArea.setWidgetResizable(True)
-        basicOptionsScrollArea.setMaximumHeight(130)  # Set maximum height
+        basicOptionsScrollArea.setMaximumHeight(130)
         basicOptionsGroup = QGroupBox("Basic Options")
         basicOptionsLayout = QVBoxLayout(basicOptionsGroup)
         basicOptionsScrollArea.setWidget(basicOptionsGroup)
         browserOptionsLayout.addWidget(basicOptionsScrollArea)
 
-        # List of basic options
         basicOptions = [
             ("Headless Mode", "Run the browser in the background without GUI"),
             ("Disable GPU", "Disable GPU acceleration"),
@@ -380,16 +377,14 @@ class Atom8(QMainWindow):
             checkbox = self.createCheckbox(option[0], option[1])
             basicOptionsLayout.addWidget(checkbox)
 
-            # Advanced options group within a scrollable area
         advancedOptionsScrollArea = QScrollArea()
         advancedOptionsScrollArea.setWidgetResizable(True)
-        advancedOptionsScrollArea.setMaximumHeight(130)  # Set maximum height
+        advancedOptionsScrollArea.setMaximumHeight(130)
         advancedOptionsGroup = QGroupBox("Advanced Options")
         advancedOptionsLayout = QVBoxLayout(advancedOptionsGroup)
         advancedOptionsScrollArea.setWidget(advancedOptionsGroup)
         browserOptionsLayout.addWidget(advancedOptionsScrollArea)
 
-        # List of advanced options
         advancedOptions = [
             ("Disable Dev Shm Usage", "Disable Dev Shm Usage (Chrome only)"),
             ("Ignore Certificate Errors", "Ignore SSL certificate errors"),
@@ -415,12 +410,10 @@ class Atom8(QMainWindow):
             checkbox = self.createCheckbox(option[0], option[1])
             advancedOptionsLayout.addWidget(checkbox)
 
-        # Browser label
         self.browserLabel = QLabel("Browser: " + self.loadSetting("defaultBrowser", "Chrome"))
         self.browserLabel.setStyleSheet("margin-top: 10px; margin-bottom: 10px;")
         mainLayout.addWidget(self.browserLabel)
 
-        # Set main layout
         self.setStyleSheet(style)
         centralWidget = QWidget()
         centralWidget.setLayout(mainLayout)
@@ -483,17 +476,19 @@ class Atom8(QMainWindow):
         scriptEditorAction.setShortcut('Ctrl+Shift+E')
         scriptEditorAction.setDisabled(True)
 
-        aboutAction = QAction('About', self)
-        aboutAction.triggered.connect(self.showAboutDialog)
-        helpMenu.addAction(aboutAction)
-
-        helpAction = QAction('Help', self)
+        helpAction = QAction('Setup Drivers', self)
         helpAction.triggered.connect(self.showHelpDialog)
         helpMenu.addAction(helpAction)
 
-        howToUseAction = QAction('How to use', self)
+        howToUseAction = QAction('How to use?', self)
         howToUseAction.triggered.connect(self.howToUseDialog)
         helpMenu.addAction(howToUseAction)
+
+        helpMenu.addSeparator()
+
+        aboutAction = QAction('About', self)
+        aboutAction.triggered.connect(self.showAboutDialog)
+        helpMenu.addAction(aboutAction)
 
     def addStep(self):
         action = self.actionSelection.currentText()
@@ -532,7 +527,6 @@ class Atom8(QMainWindow):
 
         self.steps.append(step)
         self.stepsList.addItem(display_txt)
-        # Clear input fields after adding the step
         self.locatorInput.clear()
         self.inputText.clear()
         self.sleepInput.clear()
@@ -865,8 +859,7 @@ class Atom8(QMainWindow):
         """)
 
     def showHelpDialog(self):
-        # help the user to get the drivers
-        QMessageBox.about(self, "Help", """
+        QMessageBox.about(self, "Setup Drivers", """
         <html>
         <head>
             <style>
@@ -876,12 +869,12 @@ class Atom8(QMainWindow):
             </style>
         </head>
         <body>
-            <h2>Help</h2>
-            <p><strong>Drivers:</strong> Drivers are required to run the browser. You can download the drivers from the following links:</p>
+            <h2>How to setup drivers?</h2>
+            <p>Drivers are required to run the browser. You can download the drivers from the following links:</p>
             <p><strong>Chrome:</strong> <a href="https://chromedriver.chromium.org/downloads" target="_blank">Chrome Driver</a></p>
             <p><strong>Edge:</strong> <a href="https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/" target="_blank">Edge Driver</a></p>
-            <p><strong>Firefox:</strong> <a href="" target="_blank">Firefox Driver</a></p>
-            <p><strong>Safari:</strong> <a href="" target="_blank">Safari Driver</a></p>
+            <p><strong>Firefox:</strong> <a href="https://github.com/mozilla/geckodriver/releases" target="_blank">Firefox Driver</a></p>
+            <p><strong>Safari:</strong> <a href="https://developer.apple.com/documentation/webkit/testing_with_webdriver_in_safari" target="_blank">Safari Driver Help</a></p>
             <p><strong>Drivers Location:</strong> After downloading the driver, you need to specify the location of the driver in the preferences menu.</p>
         </body>
         </html>
@@ -984,7 +977,6 @@ class Atom8(QMainWindow):
         self.prefsWindow.setWindowTitle("Preferences")
         prefsLayout = QVBoxLayout()
 
-        # Default Browser
         browserLabel = QLabel("Default Browser:")
         self.browserComboBox = QComboBox()
         self.browserComboBox.addItems(["Chrome", "Firefox", "Safari", "Edge"])
@@ -995,7 +987,6 @@ class Atom8(QMainWindow):
         browserLayout.addWidget(self.browserComboBox)
         prefsLayout.addLayout(browserLayout)
 
-        # Default Save Path
         savePathLabel = QLabel("Default Screenshots Save Path:")
         self.savePathLineEdit = QLineEdit()
         current_save_path = self.loadSetting("savePath", "")
@@ -1003,15 +994,13 @@ class Atom8(QMainWindow):
             self.savePathLineEdit.setText(current_save_path)
 
         savePathButton = QPushButton("Choose")
-        savePathButton.clicked.connect(self.chooseSavePathLocation)  # Connect to the directory selection function
-
+        savePathButton.clicked.connect(self.chooseSavePathLocation)
         savePathLayout = QHBoxLayout()
         savePathLayout.addWidget(savePathLabel)
         savePathLayout.addWidget(self.savePathLineEdit)
-        savePathLayout.addWidget(savePathButton)  # Add the button to the layout
+        savePathLayout.addWidget(savePathButton)
         prefsLayout.addLayout(savePathLayout)
 
-        # Chrome Driver Location
         driverLocationLabel = QLabel("Chrome Driver Location:")
         self.driverLocationLineEdit = QLineEdit()
         self.driverLocationLineEdit.setText(self.loadSetting("driverLocation", ""))
@@ -1024,7 +1013,6 @@ class Atom8(QMainWindow):
         driverLocationLayout.addWidget(driverLocationButton)
         prefsLayout.addLayout(driverLocationLayout)
 
-        # Edge Driver Location
         msedgeLocationLabel = QLabel("Edge Driver Location:")
         self.msedgeLocationLineEdit = QLineEdit()
         self.msedgeLocationLineEdit.setText(self.loadSetting("msedgeLocation", ""))
@@ -1037,7 +1025,6 @@ class Atom8(QMainWindow):
         msedgeLocationLayout.addWidget(msedgeLocationButton)
         prefsLayout.addLayout(msedgeLocationLayout)
 
-        # Save Button
         saveButton = QPushButton("Save")
         saveButton.clicked.connect(self.savePrefs)
         prefsLayout.addWidget(saveButton)
@@ -1058,7 +1045,7 @@ class Atom8(QMainWindow):
 
     def chooseSavePathLocation(self):
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
-        if directory:  # Check if a directory was selected
+        if directory:
             self.savePathLineEdit.setText(directory)
 
     def savePrefs(self):
@@ -1424,7 +1411,6 @@ class Atom8(QMainWindow):
         self.resultsWindow.show()
 
     def resultsTableContextMenu(self, position):
-        # Get the row and column number of the clicked cell
         index = self.resultsTable.indexAt(position)
         if index.isValid() and index.column() == 1:
             menu = QMenu()
@@ -1434,7 +1420,7 @@ class Atom8(QMainWindow):
                 self.copyLocatorValue(index.row())
 
     def copyLocatorValue(self, row):
-        comboBox = self.resultsTable.cellWidget(row, 1)  # Get the combobox from the locators column
+        comboBox = self.resultsTable.cellWidget(row, 1)
         if comboBox:
             selectedText = comboBox.currentText()
             clipboard = QApplication.clipboard()

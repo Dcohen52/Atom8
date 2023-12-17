@@ -78,7 +78,7 @@ Atom8 is designed to cater to the needs of businesses, IT professionals, researc
 
 ![image](https://github.com/Dcohen52/Atom8/assets/26333525/0dcd70cc-1e4d-4478-bf97-f7112ebbf3c7)
 
-
+### Export to JIRA:
 ![image](https://github.com/Dcohen52/Atom8/assets/26333525/b301c439-a8b6-47d6-ae72-188b8068de42)
 
 

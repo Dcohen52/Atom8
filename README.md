@@ -27,7 +27,7 @@ Atom8 supports major web browsers, offers headless mode operation, and includes 
 Atom8 is uniquely positioned to meet the needs of Quality Assurance (QA) professionals in several key areas:
 - **Comprehensive Web Testing:** Atom8 offers robust features for thorough web application testing, ensuring a comprehensive coverage of functional and performance aspects. Its ability to automate a wide range of user interactions simplifies the testing process and enhances its thoroughness.
 - **Report Generation:** Offers the capability to generate detailed reports of the automation processes, useful for documentation and analysis.
-- **Copy Full Bug to Jira:** Enables users to easily copy full bug reports in a Jira-compatible format, streamlining the bug reporting process.
+- **Copy Full Bug to Jira and more:** Enables users to easily copy full bug reports, streamlining the bug reporting process.
 - **Script Flexibility and Extensibility:** With support for custom Python scripting, QA professionals can tailor their test automation scripts to fit specific needs and scenarios, allowing for greater flexibility and precision.
 - **Cross-Browser Compatibility:** Atom8's compatibility with major web browsers ensures that web applications can be tested across different browser environments, an essential aspect of comprehensive QA testing.
 - **Headless Mode Testing:** The headless mode allows running tests in environments without a graphical user interface, ideal for automated testing pipelines and continuous integration systems.

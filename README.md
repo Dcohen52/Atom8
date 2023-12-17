@@ -71,11 +71,13 @@ Atom8 is designed to cater to the needs of businesses, IT professionals, researc
 
 ## Screenshots
 
-![image](https://github.com/Dcohen52/Atom8/assets/26333525/f37b5466-1582-49f8-b50a-4711fc2a625e)
+![image](https://github.com/Dcohen52/Atom8/assets/26333525/7382fe3b-8954-4107-9fb6-a2699b65f414)
+
 
 ![image](https://github.com/Dcohen52/Atom8/assets/26333525/45dd2487-23b8-4212-9a94-f3915ed4e1bf)
 
-![image](https://github.com/Dcohen52/Atom8/assets/26333525/6dd2b265-1b88-41aa-865b-5932769bfaa2)
+![image](https://github.com/Dcohen52/Atom8/assets/26333525/0dcd70cc-1e4d-4478-bf97-f7112ebbf3c7)
+
 
 ![image](https://github.com/Dcohen52/Atom8/assets/26333525/b301c439-a8b6-47d6-ae72-188b8068de42)
 

@@ -4,7 +4,6 @@ import os
 import logging
 import time
 from datetime import datetime
-
 from PyQt5.QtCore import Qt, QSize, QRect
 from PyQt5.QtGui import QColor, QTextFormat, QPainter
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLineEdit, QLabel, QComboBox, \
@@ -15,6 +14,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.edge.options import Options as EdgeOptions
 import pandas as pd
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
+from openpyxl.utils.dataframe import dataframe_to_rows
 from helper import extract_elements_to_json
 import platform
 
@@ -825,7 +827,7 @@ class Atom8(QMainWindow):
                     }
                 """)
 
-                self.exportButton = QPushButton('Export Report', self)
+                self.exportButton = QPushButton('Export to Excel', self)
                 self.exportButton.clicked.connect(self.exportReport)
 
                 self.buttonGroupBox = QGroupBox("Actions", self)
@@ -865,11 +867,46 @@ class Atom8(QMainWindow):
         def exportReport(self):
             try:
                 data = []
-                for i in range(self.resultsTable.rowCount()):
-                    data.append([self.resultsTable.item(i, 0).text(), self.resultsTable.item(i, 1).text()])
+
+                # Adding test details
+                data.append(["Test Name", self.parent().testName.text()])
+                data.append(["Description", self.parent().testDescription.text()])
+                data.append(["", ""])  # Spacer row
+
+                # Collecting steps and statuses
+                for row in range(self.resultsTable.rowCount()):
+                    data.append([self.resultsTable.item(row, 0).text(), self.resultsTable.item(row, 1).text()])
+                data.append(["", ""])  # Spacer row
 
                 df = pd.DataFrame(data, columns=["Step", "Status"])
-                df.to_excel(f"{self.parent().testName.text()}.xlsx", index=False)
+
+                # Collecting browser options
+                browser_options = [checkbox.text() for checkbox in self.parent().findChildren(QCheckBox) if
+                                   checkbox.isChecked() and checkbox.text() != "Generate Report"]
+                browser_options_row = ["Browser Options", ', '.join(browser_options)] if browser_options else [
+                    "Browser Options", 'None']
+                df.loc[df.index.max() + 1] = browser_options_row
+
+                # Create a new Excel workbook
+                wb = Workbook()
+                ws = wb.active
+
+                # Convert DataFrame to Excel rows
+                for r_idx, row in enumerate(dataframe_to_rows(df, index=False, header=True)):
+                    for c_idx, value in enumerate(row, 1):
+                        cell = ws.cell(row=r_idx + 1, column=c_idx, value=value)
+
+                        # Applying styles
+                        if r_idx == 0:  # Header row
+                            cell.font = Font(bold=True)
+                        if c_idx == 2:  # Status column
+                            if value == "Passed":
+                                cell.fill = PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
+                            elif value == "Failed":
+                                cell.fill = PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
+
+                # Save the workbook
+                wb.save(f"{self.parent().testName.text()}.xlsx")
                 QMessageBox.information(self, "Exported", "Report exported successfully.")
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Error while exporting report: {e}")

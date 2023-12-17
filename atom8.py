@@ -830,17 +830,25 @@ class Atom8(QMainWindow):
                 self.exportButton = QPushButton('Export to Excel', self)
                 self.exportButton.clicked.connect(self.exportReport)
 
-                self.buttonGroupBox = QGroupBox("Actions", self)
+                self.buttonGroupBox = QGroupBox("Export Descriptions to", self)
                 buttonGroupLayout = QHBoxLayout()
 
-                self.copyJiraMarkdownButton = QPushButton('Copy to JIRA description', self.buttonGroupBox)
+                self.copyJiraMarkdownButton = QPushButton('JIRA', self.buttonGroupBox)
                 self.copyJiraMarkdownButton.clicked.connect(self.copyJiraMarkdown)
                 self.copyJiraMarkdownButton.setProperty("class", "secondary-btn")
                 buttonGroupLayout.addWidget(self.copyJiraMarkdownButton)
 
-                self.newButton = QPushButton('New Button', self.buttonGroupBox)
-                self.newButton.setProperty("class", "secondary-btn")
-                buttonGroupLayout.addWidget(self.newButton)
+                self.mondayButton = QPushButton('Monday.com', self.buttonGroupBox)
+                self.mondayButton.setProperty("class", "secondary-btn")
+                buttonGroupLayout.addWidget(self.mondayButton)
+
+                self.proofhubButton = QPushButton('ProofHub', self.buttonGroupBox)
+                self.proofhubButton.setProperty("class", "secondary-btn")
+                buttonGroupLayout.addWidget(self.proofhubButton)
+
+                self.trelloButton = QPushButton('ClickUp', self.buttonGroupBox)
+                self.trelloButton.setProperty("class", "secondary-btn")
+                buttonGroupLayout.addWidget(self.trelloButton)
 
                 self.buttonGroupBox.setLayout(buttonGroupLayout)
 

@@ -846,9 +846,9 @@ class Atom8(QMainWindow):
                 self.proofhubButton.setProperty("class", "secondary-btn")
                 buttonGroupLayout.addWidget(self.proofhubButton)
 
-                self.trelloButton = QPushButton('ClickUp', self.buttonGroupBox)
-                self.trelloButton.setProperty("class", "secondary-btn")
-                buttonGroupLayout.addWidget(self.trelloButton)
+                self.clickupButton = QPushButton('ClickUp', self.buttonGroupBox)
+                self.clickupButton.setProperty("class", "secondary-btn")
+                buttonGroupLayout.addWidget(self.clickupButton)
 
                 self.buttonGroupBox.setLayout(buttonGroupLayout)
 

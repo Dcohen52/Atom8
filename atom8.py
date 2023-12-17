@@ -3,18 +3,20 @@ import sys
 import os
 import logging
 import time
+from datetime import datetime
+
 from PyQt5.QtCore import Qt, QSize, QRect
 from PyQt5.QtGui import QColor, QTextFormat, QPainter
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLineEdit, QLabel, QComboBox, \
     QListWidget, QHBoxLayout, QAction, QMessageBox, QFileDialog, QStatusBar, QCheckBox, QTextEdit, QInputDialog, \
-    QDialog, QTableWidgetItem, QTableWidget, QMenu, QHeaderView, QPlainTextEdit, QTabWidget, QGroupBox, QGridLayout, \
-    QScrollArea
+    QDialog, QTableWidgetItem, QTableWidget, QMenu, QHeaderView, QPlainTextEdit, QTabWidget, QGroupBox, QScrollArea
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.edge.options import Options as EdgeOptions
-
+import pandas as pd
 from helper import extract_elements_to_json
+import platform
 
 
 class CustomComboBox(QComboBox):
@@ -151,6 +153,7 @@ class Atom8(QMainWindow):
         self.currentFilePath = None
         self.resultsTable = None
         self.setupScriptEditor()
+        self.results = []
 
     def initUI(self):
 
@@ -287,14 +290,14 @@ class Atom8(QMainWindow):
             background-color: #0069D9;
             color: white;
         }
-        
+
         QGroupBox {
             background-color: #FFFFFF;
             border: 1px solid #ddd;
             border-radius: 4px;
             padding: 10px;
         }
-        
+
         QScrollArea {
             border: 1px solid #ddd;
             border-radius: 4px;
@@ -328,7 +331,16 @@ class Atom8(QMainWindow):
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
 
+        self.testName = QLineEdit(self)
+        self.testName.setPlaceholderText("Test Name")
+
+        self.testDescription = QLineEdit(self)
+        self.testDescription.setPlaceholderText("Description")
+
         mainLayout = QVBoxLayout()
+        mainLayout.addWidget(self.testName)
+        mainLayout.addWidget(self.testDescription)
+
         self.setupMenuBar()
         self.setupActionSelection(mainLayout)
         self.setupButtonsAndStepsList(mainLayout)
@@ -496,7 +508,7 @@ class Atom8(QMainWindow):
         locator_value = self.locatorInput.text()
         text_value = self.inputText.text()
         description_value = self.inputDescription.text()
-        sleep_value = self.sleepInput.text()
+        sleep_value = self.inputText.text()
 
         if action == 'Sleep':
             step = (action, sleep_value)
@@ -583,6 +595,13 @@ class Atom8(QMainWindow):
     def setupButtonsAndStepsList(self, layout):
         self.editMode = False
         self.editIndex = None
+
+        self.generateReport = QCheckBox("Generate Report", self)
+        self.generateReport.setChecked(False)
+        self.generateReport.setToolTip("Generate a report after the automation is completed")
+        self.generateReport.setStyleSheet("padding-top: 10px;padding-bottom: 10px;")
+        layout.addWidget(self.generateReport)
+
         self.addButton = QPushButton('Add Step', self)
         self.addButton.clicked.connect(self.addOrEditStep)
 
@@ -693,6 +712,96 @@ class Atom8(QMainWindow):
         else:
             self.inputText.setPlaceholderText("Enter Text")
 
+    class ResultsWindow(QDialog):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.setWindowTitle(f"Results for {parent.testName.text()}")
+            self.setGeometry(100, 100, 600, 400)
+
+            self.testNameLabel = QLabel(f"{parent.testName.text()}", self)
+            self.testNameLabel.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
+
+            self.testDescriptionLabel = QLabel(f"{parent.testDescription.text()}", self)
+            self.testDescriptionLabel.setStyleSheet("font-size: 14px; margin-bottom: 10px;")
+            self.testDescriptionLabel.setWordWrap(True)
+            self.testDescriptionLabel.setMaximumWidth(550)
+
+            self.browserOptionsLabel = QLabel(f"Performed on {parent.browserLabel.text()}, with the following options:",
+                                              self)
+            self.browserOptionsLabel.setStyleSheet("font-size: 14px; margin-bottom: 10px;")
+            self.browserOptionsLabel.setWordWrap(True)
+            self.browserOptionsLabel.setMaximumWidth(550)
+
+            for checkbox in parent.findChildren(QCheckBox):
+                if checkbox.isChecked():
+                    if checkbox.text() == "Generate Report":
+                        continue
+                    self.browserOptionsLabel.setText(f"{self.browserOptionsLabel.text()}\n - {checkbox.text()}")
+
+            self.resultsTable = QTableWidget(self)
+            self.resultsTable.setColumnCount(2)
+            self.resultsTable.setHorizontalHeaderLabels(["Step", "Status"])
+            self.resultsTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.resultsTable.verticalHeader().setVisible(False)
+            self.resultsTable.setEditTriggers(QTableWidget.NoEditTriggers)
+            self.resultsTable.setAlternatingRowColors(True)
+            self.resultsTable.setShowGrid(False)
+
+            self.resultsTable.setStyleSheet("""
+                QTableWidget {
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    color: #555;
+                    background-color: #f5f5f5;
+                }
+                QTableWidget::item {
+                    padding: 4px;
+                    color: #555;
+                }
+                QTableWidget::item:selected {
+                    background-color: #007BFF;
+                    color: white;
+                }
+            """)
+
+            self.exportButton = QPushButton('Export Report', self)
+            self.exportButton.clicked.connect(self.exportReport)
+
+            self.copyJiraMarkdownButton = QPushButton('Copy to JIRA Markdown', self)
+            self.copyJiraMarkdownButton.clicked.connect(self.copyJiraMarkdown)
+
+            layout = QVBoxLayout(self)
+            layout.addWidget(self.testNameLabel)
+            layout.addWidget(self.testDescriptionLabel)
+            layout.addWidget(self.browserOptionsLabel)
+            layout.addWidget(self.resultsTable)
+            layout.addWidget(self.exportButton)
+            layout.addWidget(self.copyJiraMarkdownButton)
+            self.setLayout(layout)
+
+        def copyJiraMarkdown(self):
+            jiraMarkdown = self.parent().generateBugForJira()
+            clipboard = QApplication.clipboard()
+            clipboard.setText(jiraMarkdown)
+            QMessageBox.information(self, "Copied", "JIRA Markdown copied to clipboard.")
+
+        def exportReport(self):
+            data = []
+            for row in range(self.resultsTable.rowCount()):
+                step = self.resultsTable.item(row, 0).text()
+                status = self.resultsTable.item(row, 1).text()
+                data.append([step, status])
+
+            df = pd.DataFrame(data, columns=["Step", "Status"])
+
+            options = QFileDialog.Options()
+            fileName, _ = QFileDialog.getSaveFileName(self, "Export Report", "", "Excel Files (*.xlsx)",
+                                                      options=options)
+            if fileName:
+                if not fileName.endswith('.xlsx'):
+                    fileName += '.xlsx'
+                df.to_excel(fileName, index=False)
+
     def startAutomation(self):
         chromeOptionsMapping = {
             "Headless Mode": "--headless",
@@ -789,9 +898,14 @@ class Atom8(QMainWindow):
                 'Partial Link Text': By.PARTIAL_LINK_TEXT
             }
 
+            if self.generateReport.isChecked():
+                results_window = self.ResultsWindow(self)
+                results_window.resultsTable.setRowCount(len(self.steps))
+
+            self.results = []
+
             for step in self.steps:
                 action = step[0]
-
                 try:
                     if action == 'Navigate to URL':
                         self.driver.get(step[1])
@@ -804,12 +918,7 @@ class Atom8(QMainWindow):
                         else:
                             element.send_keys(step[3])
                     elif action == 'Take Screenshot':
-                        screenshot_filename = f"{step[1]}{'.png' if not step[1].endswith('.png') else ''}"
-                        save_path = self.loadSetting("savePath", "")
-                        if not save_path or not os.path.exists(save_path):
-                            save_path = os.getcwd()
-                        full_screenshot_path = os.path.join(save_path, screenshot_filename)
-                        self.driver.save_screenshot(full_screenshot_path)
+                        self.driver.save_screenshot(step[1])
                     elif action == 'Execute JavaScript':
                         self.driver.execute_script(step[1])
                     elif action == 'Sleep':
@@ -817,14 +926,56 @@ class Atom8(QMainWindow):
                     elif action == 'Maximize Window':
                         self.driver.maximize_window()
 
+                    self.results.append((step, 'Passed'))
+
                 except Exception as e:
                     self.logger.error(f"Error in {action}: {e}")
+                    self.results.append((step, 'Failed'))
 
             self.driver.quit()
-            self.logger.info("\n\nOperation completed successfully.\n\n")
+
+            if self.generateReport.isChecked():
+                self.displayResults(self.results)
+
+            self.logger.info("\n\nOperation completed successfully.\n")
+
         except Exception as e:
-            self.logger.error(f"Error in starting the browser: {e}")
-            raise
+            self.logger.error(f"Error: {e}")
+            QMessageBox.critical(self, "Error", str(e))
+
+    def formatStepText(self, step):
+        action = step[0]
+        if action == 'Sleep':
+            return f'Sleep for {step[1]} seconds'
+        elif action in ['Click Element', 'Input Text']:
+            return f'{action} at {step[1]}: {step[2]}'
+        elif action in ['Navigate to URL', 'Execute JavaScript', 'Execute Python Script']:
+            return f'{action}: {step[1]}'
+        elif action == 'Take Screenshot':
+            return f'Take screenshot: {step[1]}'
+        elif action == 'Maximize Window':
+            return 'Maximize Window'
+        else:
+            return 'Unknown Action'
+
+    def displayResults(self, results):
+        results_window = self.ResultsWindow(self)
+        results_window.resultsTable.setRowCount(len(results))
+
+        for index, (step, status) in enumerate(results):
+            step_text = self.formatStepText(step)
+            step_item = QTableWidgetItem(step_text)
+            status_item = QTableWidgetItem(status)
+
+            if status == 'Passed':
+                status_item.setBackground(QColor(203, 255, 171))
+            else:
+                status_item.setBackground(QColor(255, 171, 171))
+
+            results_window.resultsTable.setItem(index, 0, step_item)
+            results_window.resultsTable.setItem(index, 1, status_item)
+
+        results_window.exec_()
 
     def setupLogging(self):
         self.logger = logging.getLogger('Atom8')
@@ -880,6 +1031,9 @@ class Atom8(QMainWindow):
         </html>
         """)
 
+    def generateReport(self):
+        pass
+
     def howToUseDialog(self):
         QMessageBox.about(self, "How to use", """
         <html>
@@ -916,13 +1070,23 @@ class Atom8(QMainWindow):
             self.currentFilePath = fileName
             self.updateRecentFiles(fileName)
             with open(fileName, "w+") as file:
-                json.dump(self.steps, file)
+                file_content = {
+                    "testName": self.testName.text(),
+                    "testDescription": self.testDescription.text(),
+                    "steps": self.steps
+                }
+                json.dump(file_content, file)
             self.statusBar.showMessage(f"File saved as {fileName} successfully.", 5000)
 
     def realSaveFile(self):
         if self.currentFilePath:
             with open(self.currentFilePath, "w") as file:
-                json.dump(self.steps, file)
+                file_content = {
+                    "testName": self.testName.text(),
+                    "testDescription": self.testDescription.text(),
+                    "steps": self.steps
+                }
+                json.dump(file_content, file)
             self.statusBar.showMessage(f"File {self.currentFilePath} saved successfully.", 5000)
         else:
             self.saveFile()
@@ -934,11 +1098,13 @@ class Atom8(QMainWindow):
             self.updateRecentFiles(fileName)
             try:
                 with open(fileName, "r") as file:
-                    loaded_steps = json.load(file)
-                    if not isinstance(loaded_steps, list):
-                        raise ValueError("File content is not in the expected list format")
+                    file_content = json.load(file)
+                    if not isinstance(file_content, dict) or "steps" not in file_content:
+                        raise ValueError("File content is not in the expected format")
 
-                    self.steps = loaded_steps
+                    self.testName.setText(file_content.get("testName", ""))
+                    self.testDescription.setText(file_content.get("testDescription", ""))
+                    self.steps = file_content["steps"]
                     self.stepsList.clear()
                     for index, step in enumerate(self.steps):
                         if not isinstance(step, (list, tuple)):
@@ -1199,6 +1365,102 @@ class Atom8(QMainWindow):
             elif response == QMessageBox.Cancel:
                 return
 
+    def generateBugForJira(self):
+        try:
+            bugReport = ""
+            osName = platform.system().lower()
+
+            testName = self.testName.text()
+            testDescription = self.testDescription.text()
+
+            currentDateTime = datetime.now().strftime("%Y-%m-%d %H:%M")
+            bugReport += f"**Date:** {currentDateTime}"
+            bugReport += f"\n**Name:** {testName}"
+            bugReport += f"\n**Description:** {testDescription}\n"
+
+            if osName == "windows":
+                bugReport += f"\n**Operating System:** {platform.system()} {platform.release()} {platform.version()}"
+            elif osName == "darwin":
+                bugReport += f"\n**Operating System:** {platform.system()} {platform.release()} {platform.version()}"
+
+            browserName = self.loadSetting("defaultBrowser", "Chrome")
+            browserVersion = ""
+            if browserName == "Chrome":
+                browserVersion = self.driver.capabilities['browserVersion']
+            elif browserName == "Edge":
+                browserVersion = self.driver.capabilities['browserVersion']
+            elif browserName == "Firefox":
+                browserVersion = self.driver.capabilities['browserVersion']
+            elif browserName == "Safari":
+                browserVersion = self.driver.capabilities['browserVersion']
+            bugReport += f"\n**Browser:** {browserName} {browserVersion}\n"
+            bugReport += "\n---\n"
+
+            bugReport += "**Performed with the following options:**\n"
+            for checkbox in self.findChildren(QCheckBox):
+                if checkbox.isChecked():
+                    if "Generate Report" in checkbox.text():
+                        continue
+                    bugReport += f"- [x] {checkbox.text()}\n"
+
+            bugReport += "\n---\n"
+
+            bugReport += "**Steps to Reproduce:**\n"
+            bugReport += "| Step Number | Action | Value  | Expected Result | Actual Result | Status |\n"
+            bugReport += "|-------------|--------|--------|-----------------|---------------|--------|\n"
+            for index, step in enumerate(self.steps):
+                stepNumber = index + 1
+                action = step[0]
+                value = ""
+                expected = ""
+                if action == 'Sleep':
+                    value = step[1]
+                    expected = f'Sleep for {step[1]} seconds.'
+                elif action in ['Click Element', 'Input Text']:
+                    value = f'Text: "{step[3]}"' if step[3] else f'Locator: {step[1]}, {step[2]}' if step[2] else ""
+                    expected = f'{action} by {step[1]}: {step[2]} {"with text " + step[3] if step[3] else ""}'
+                elif action in ['Navigate to URL', 'Execute JavaScript', 'Execute Python Script']:
+                    value = step[1]
+                    expected = f'{action}: {step[1]}'
+                elif action == 'Take Screenshot':
+                    value = step[1]
+                    expected = f'Take screenshot: {step[1]}'
+                elif action == 'Maximize Window':
+                    expected = 'Maximize Window'
+                else:
+                    expected = 'Unknown Action'
+
+                print(f"Results: {self.results}")
+
+                if self.results[index][1] == 'Passed':
+                    bugReport += f"| {stepNumber} | {action} | {value} | {expected} | | Passed |\n"
+                else:
+                    bugReport += f"| {stepNumber} | {action} | {value} | {expected} | | Failed |\n"
+
+                # bugReport += f"| {stepNumber} | {action} | {value} | {expected} | | |\n"
+            bugReport += "\n"
+
+            bugReport += "\n**Attachments:**\n <Add screenshots here>\n"
+
+            bugReport += "\n---\n"
+
+            return bugReport
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to generate bug report: {e}")
+
+    def updateRecentFiles(self, fileName):
+        if fileName in self.recentFiles:
+            self.recentFiles.remove(fileName)
+        self.recentFiles.insert(0, fileName)
+        if len(self.recentFiles) > 10:
+            self.recentFiles.pop()
+        self.saveRecentFiles()
+        self.updateRecentFilesMenu()
+
+    def stepPassedOrFailed(self, step, status):
+        if self.generateReport.isChecked():
+            self.results.append((step, status))
+
     def saveLogs(self):
         options = QFileDialog.Options()
         fileName, _ = QFileDialog.getSaveFileName(self, "Save Logs", "", "Log Files (*.log)", options=options)
@@ -1343,11 +1605,6 @@ class Atom8(QMainWindow):
         self.sleepInput.setText('')
         self.inputDescription.setText('')
 
-    def updateRecentFiles(self, filePath):
-        if filePath not in self.recentFiles:
-            self.recentFiles.append(filePath)
-            self.updateRecentFilesMenu()
-
     def updateRecentFilesMenu(self):
         self.recentFilesMenu.clear()
         for filePath in self.recentFiles:
@@ -1358,24 +1615,29 @@ class Atom8(QMainWindow):
     def openRecentFile(self, filePath):
         try:
             with open(filePath, "r") as file:
-                self.steps = json.load(file)
+                file_content = json.load(file)
+                if not isinstance(file_content, dict) or "steps" not in file_content:
+                    raise ValueError("File content is not in the expected format")
+
+                self.testName.setText(file_content.get("testName", ""))
+                self.testDescription.setText(file_content.get("testDescription", ""))
+                self.steps = file_content["steps"]
                 self.stepsList.clear()
-                for step in self.steps:
+                for index, step in enumerate(self.steps):
+                    if not isinstance(step, (list, tuple)):
+                        QMessageBox.critical(self, "Error", f"Invalid step format at index {index}: {step}")
+                        continue
                     display_text = self.constructStepDisplayText(step)
                     self.stepsList.addItem(display_text)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to open file: {e}")
 
     def loadRecentFiles(self):
-        try:
-            if os.path.exists(self.recentFilesFilePath()):
-                with open(self.recentFilesFilePath(), 'r') as file:
-                    self.recentFiles = json.load(file)
-            else:
-                self.recentFiles = []
-            self.updateRecentFilesMenu()
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to load recent files: {e}")
+        if os.path.exists(self.recentFilesFilePath()):
+            with open(self.recentFilesFilePath(), 'r') as file:
+                self.recentFiles = json.load(file)
+                self.updateRecentFilesMenu()
+        else:
             self.recentFiles = []
 
     def extractWebElements(self):

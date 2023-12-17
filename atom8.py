@@ -26,23 +26,30 @@ class CustomComboBox(QComboBox):
         self.customContextMenuRequested.connect(self.showContextMenu)
 
     def showContextMenu(self, position):
-        menu = QMenu()
-        copyAction = menu.addAction("Copy")
-        action = menu.exec_(self.mapToGlobal(position))
-        if action == copyAction:
-            self.copyToClipboard()
+        try:
+            menu = QMenu()
+            copyAction = menu.addAction("Copy")
+            action = menu.exec_(self.mapToGlobal(position))
+            if action == copyAction:
+                self.copyToClipboard()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while copying to clipboard: {e}")
 
     def copyToClipboard(self):
-        text = self.currentText()
+        try:
+            text = self.currentText()
 
-        parts = text.split(":", 1)
-        if len(parts) == 2:
-            text_to_copy = parts[1].strip()
-        else:
-            text_to_copy = text
+            parts = text.split(":", 1)
+            if len(parts) == 2:
+                text_to_copy = parts[1].strip()
+            else:
+                text_to_copy = text
 
-        clipboard = QApplication.clipboard()
-        clipboard.setText(text_to_copy)
+            clipboard = QApplication.clipboard()
+            clipboard.setText(text_to_copy)
+            self.logger.info(f"Copied {text_to_copy} to clipboard.")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while copying to clipboard: {e}")
 
 
 class QTextEditLogger(logging.Handler):
@@ -324,6 +331,21 @@ class Atom8(QMainWindow):
         QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
             background: none;
         }
+        
+        QPushButton.secondary-btn {
+            color: #333;
+            background-color: #FFFFFF;
+            border-radius: 4px;
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            font-size: 12px;
+        }
+        
+        QPushButton.secondary-btn:hover {
+            background-color: #EEEEEE;
+            border-color: #ddd;
+            cursor: pointer;
+        }
         """
 
         self.setWindowTitle('Atom8')
@@ -360,6 +382,7 @@ class Atom8(QMainWindow):
         buttonsLayout.addWidget(self.saveLogsButton)
         self.clearLogsButton = QPushButton('Clear Logs', self)
         self.clearLogsButton.clicked.connect(self.clearLogs)
+        self.clearLogsButton.setProperty("class", "secondary-btn")
         buttonsLayout.addWidget(self.clearLogsButton)
         logViewerLayout.addLayout(buttonsLayout)
         mainTabWidget.addTab(logViewerTab, "Log Viewer")
@@ -432,562 +455,624 @@ class Atom8(QMainWindow):
         self.setCentralWidget(centralWidget)
 
     def setupMenuBar(self):
-        menuBar = self.menuBar()
-        fileMenu = menuBar.addMenu('File')
-        toolsMenu = menuBar.addMenu('Tools')
-        helpMenu = menuBar.addMenu('Help')
+        try:
+            menuBar = self.menuBar()
+            fileMenu = menuBar.addMenu('File')
+            toolsMenu = menuBar.addMenu('Tools')
+            helpMenu = menuBar.addMenu('Help')
 
-        newAction = QAction('New', self)
-        newAction.triggered.connect(self.newFile)
-        newAction.setShortcut('Ctrl+N')
-        fileMenu.addAction(newAction)
+            newAction = QAction('New', self)
+            newAction.triggered.connect(self.newFile)
+            newAction.setShortcut('Ctrl+N')
+            fileMenu.addAction(newAction)
 
-        openAction = QAction('Open', self)
-        openAction.triggered.connect(self.openFile)
-        openAction.setShortcut('Ctrl+O')
-        fileMenu.addAction(openAction)
+            openAction = QAction('Open', self)
+            openAction.triggered.connect(self.openFile)
+            openAction.setShortcut('Ctrl+O')
+            fileMenu.addAction(openAction)
 
-        self.recentFilesMenu = fileMenu.addMenu('Open Recent')
-        self.updateRecentFilesMenu()
+            self.recentFilesMenu = fileMenu.addMenu('Open Recent')
+            self.updateRecentFilesMenu()
 
-        realSaveAction = QAction('Save', self)
-        realSaveAction.triggered.connect(self.realSaveFile)
-        realSaveAction.setShortcut('Ctrl+S')
-        fileMenu.addAction(realSaveAction)
+            realSaveAction = QAction('Save', self)
+            realSaveAction.triggered.connect(self.realSaveFile)
+            realSaveAction.setShortcut('Ctrl+S')
+            fileMenu.addAction(realSaveAction)
 
-        saveAction = QAction('Save As', self)
-        saveAction.triggered.connect(self.saveFile)
-        saveAction.setShortcut('Ctrl+Shift+S')
-        fileMenu.addAction(saveAction)
+            saveAction = QAction('Save As', self)
+            saveAction.triggered.connect(self.saveFile)
+            saveAction.setShortcut('Ctrl+Shift+S')
+            fileMenu.addAction(saveAction)
 
-        clearAction = QAction('Clear All', self)
-        clearAction.triggered.connect(self.clearStepsList)
-        clearAction.setShortcut('Ctrl+N')
-        fileMenu.addAction(clearAction)
+            clearAction = QAction('Clear All', self)
+            clearAction.triggered.connect(self.clearStepsList)
+            clearAction.setShortcut('Ctrl+N')
+            fileMenu.addAction(clearAction)
 
-        fileMenu.addSeparator()
+            fileMenu.addSeparator()
 
-        preferencesAction = QAction('Preferences', self)
-        preferencesAction.triggered.connect(self.prefs)
-        fileMenu.addAction(preferencesAction)
-        preferencesAction.setShortcut('Ctrl+P')
+            preferencesAction = QAction('Preferences', self)
+            preferencesAction.triggered.connect(self.prefs)
+            fileMenu.addAction(preferencesAction)
+            preferencesAction.setShortcut('Ctrl+P')
 
-        exitAction = QAction('Exit', self)
-        exitAction.triggered.connect(self.close)
-        exitAction.setShortcut('Ctrl+Q')
-        fileMenu.addAction(exitAction)
+            exitAction = QAction('Exit', self)
+            exitAction.triggered.connect(self.close)
+            exitAction.setShortcut('Ctrl+Q')
+            fileMenu.addAction(exitAction)
 
-        extractElementsAction = QAction('Extract Web Elements', self)
-        extractElementsAction.triggered.connect(self.extractWebElements)
-        extractElementsAction.setShortcut('Ctrl+E')
-        toolsMenu.addAction(extractElementsAction)
+            extractElementsAction = QAction('Extract Web Elements', self)
+            extractElementsAction.triggered.connect(self.extractWebElements)
+            extractElementsAction.setShortcut('Ctrl+E')
+            toolsMenu.addAction(extractElementsAction)
 
-        scriptEditorAction = QAction('Script Editor', self)
-        scriptEditorAction.triggered.connect(self.showScriptEditor)
-        toolsMenu.addAction(scriptEditorAction)
-        scriptEditorAction.setShortcut('Ctrl+Shift+E')
-        scriptEditorAction.setDisabled(True)
+            scriptEditorAction = QAction('Script Editor', self)
+            scriptEditorAction.triggered.connect(self.showScriptEditor)
+            toolsMenu.addAction(scriptEditorAction)
+            scriptEditorAction.setShortcut('Ctrl+Shift+E')
+            scriptEditorAction.setDisabled(True)
 
-        helpAction = QAction('Setup Drivers', self)
-        helpAction.triggered.connect(self.showHelpDialog)
-        helpMenu.addAction(helpAction)
+            helpAction = QAction('Setup Drivers', self)
+            helpAction.triggered.connect(self.showHelpDialog)
+            helpMenu.addAction(helpAction)
 
-        howToUseAction = QAction('How to use?', self)
-        howToUseAction.triggered.connect(self.howToUseDialog)
-        helpMenu.addAction(howToUseAction)
+            howToUseAction = QAction('How to use?', self)
+            howToUseAction.triggered.connect(self.howToUseDialog)
+            helpMenu.addAction(howToUseAction)
 
-        helpMenu.addSeparator()
+            helpMenu.addSeparator()
 
-        aboutAction = QAction('About', self)
-        aboutAction.triggered.connect(self.showAboutDialog)
-        helpMenu.addAction(aboutAction)
+            aboutAction = QAction('About', self)
+            aboutAction.triggered.connect(self.showAboutDialog)
+            helpMenu.addAction(aboutAction)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while setting up menu bar: {e}")
 
     def addStep(self):
-        action = self.actionSelection.currentText()
-        locator_type = self.locatorSelection.currentText()
-        locator_value = self.locatorInput.text()
-        text_value = self.inputText.text()
-        description_value = self.inputDescription.text()
-        sleep_value = self.inputText.text()
+        try:
+            action = self.actionSelection.currentText()
+            locator_type = self.locatorSelection.currentText()
+            locator_value = self.locatorInput.text()
+            text_value = self.inputText.text()
+            description_value = self.inputDescription.text()
+            sleep_value = self.inputText.text()
 
-        if action == 'Sleep':
-            step = (action, sleep_value)
-            display_txt = f'Sleep for {sleep_value} seconds.'
-            self.logger.info(f"Added step: {display_txt}")
-        elif action in ['Click Element', 'Input Text']:
-            step = (action, locator_type, locator_value, text_value, description_value)
-            display_txt = f'{action}: (By: {locator_type if locator_type != "Select Locator" else "N/A"}, {locator_value}){", Text: " + text_value if text_value else ""}, Description: {description_value}'
-            self.logger.info(f"Added step: {display_txt}")
-        elif action in ['Navigate to URL', 'Execute JavaScript', 'Execute Python Script']:
-            step = (action, text_value, description_value)
-            display_txt = f'{action}: {text_value}{"." if not description_value else f", Description: {description_value}"}'
-            self.logger.info(f"Added step: {display_txt}")
-        elif action == 'Maximize Window':
-            step = (action,)
-            display_txt = f'Maximize Window.'
-            self.logger.info(f"Added step: {display_txt}")
-        elif action == 'Take Screenshot':
-            screenshot_filename = self.inputText.text()
-            if not screenshot_filename.endswith('.png'):
-                screenshot_filename += '.png'
-            step = (action, screenshot_filename)
-            display_txt = f'Take screenshot and save as {screenshot_filename}'
-            self.logger.info(f"Added step: {display_txt}")
-        else:
-            QMessageBox.warning(self, "Invalid Action", "The selected action is not supported.")
-            return
+            if action == 'Sleep':
+                step = (action, sleep_value)
+                display_txt = f'Sleep for {sleep_value} seconds.'
+                self.logger.info(f"Added step: {display_txt}")
+            elif action in ['Click Element', 'Input Text']:
+                step = (action, locator_type, locator_value, text_value, description_value)
+                display_txt = f'{action}: (By: {locator_type if locator_type != "Select Locator" else "N/A"}, {locator_value}){", Text: " + text_value if text_value else ""}, Description: {description_value}'
+                self.logger.info(f"Added step: {display_txt}")
+            elif action in ['Navigate to URL', 'Execute JavaScript', 'Execute Python Script']:
+                step = (action, text_value, description_value)
+                display_txt = f'{action}: {text_value}{"." if not description_value else f", Description: {description_value}"}'
+                self.logger.info(f"Added step: {display_txt}")
+            elif action == 'Maximize Window':
+                step = (action,)
+                display_txt = f'Maximize Window.'
+                self.logger.info(f"Added step: {display_txt}")
+            elif action == 'Take Screenshot':
+                screenshot_filename = self.inputText.text()
+                if not screenshot_filename.endswith('.png'):
+                    screenshot_filename += '.png'
+                step = (action, screenshot_filename)
+                display_txt = f'Take screenshot and save as {screenshot_filename}'
+                self.logger.info(f"Added step: {display_txt}")
+            else:
+                QMessageBox.warning(self, "Invalid Action", "The selected action is not supported.")
+                return
 
-        self.steps.append(step)
-        self.stepsList.addItem(display_txt)
-        self.locatorInput.clear()
-        self.inputText.clear()
-        self.sleepInput.clear()
-        self.inputDescription.clear()
+            self.steps.append(step)
+            self.stepsList.addItem(display_txt)
+            self.locatorInput.clear()
+            self.inputText.clear()
+            self.sleepInput.clear()
+            self.inputDescription.clear()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while adding step: {e}")
 
     def createCheckbox(self, label, tooltip):
-        checkbox = QCheckBox(label, self)
-        checkbox.setChecked(False)
-        checkbox.setToolTip(tooltip)
-        return checkbox
+        try:
+            checkbox = QCheckBox(label, self)
+            checkbox.setChecked(False)
+            checkbox.setToolTip(tooltip)
+            return checkbox
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while creating checkbox: {e}")
 
     def setupActionSelection(self, layout):
-        self.actionSelection = QComboBox(self)
-        actions = ['Select Action', 'Navigate to URL', 'Click Element', 'Input Text', 'Take Screenshot',
-                   'Execute JavaScript', 'Sleep', 'Execute Python Script', 'Maximize Window']
-        self.actionSelection.addItems(actions)
-        self.actionSelection.currentIndexChanged.connect(self.updateFields)
+        try:
+            self.actionSelection = QComboBox(self)
+            actions = ['Select Action', 'Navigate to URL', 'Click Element', 'Input Text', 'Take Screenshot',
+                       'Execute JavaScript', 'Sleep', 'Execute Python Script', 'Maximize Window']
+            self.actionSelection.addItems(actions)
+            self.actionSelection.currentIndexChanged.connect(self.updateFields)
 
-        actionSelectionLayout = QVBoxLayout()
-        actionSelectionLayout.addWidget(QLabel('Select Action:'))
-        actionSelectionLayout.addWidget(self.actionSelection)
+            actionSelectionLayout = QVBoxLayout()
+            actionSelectionLayout.addWidget(QLabel('Select Action:'))
+            actionSelectionLayout.addWidget(self.actionSelection)
 
-        self.locatorSelection = QComboBox(self)
-        locator_types = ['Select Locator', 'XPath', 'CSS Selector', 'ID', 'Name', 'Class Name', 'Tag Name', 'Link Text',
-                         'Partial Link Text']
-        self.locatorSelection.addItems(locator_types)
+            self.locatorSelection = QComboBox(self)
+            locator_types = ['Select Locator', 'XPath', 'CSS Selector', 'ID', 'Name', 'Class Name', 'Tag Name',
+                             'Link Text',
+                             'Partial Link Text']
+            self.locatorSelection.addItems(locator_types)
 
-        self.locatorInput = QLineEdit(self)
-        self.locatorInput.setPlaceholderText("Enter locator value")
+            self.locatorInput = QLineEdit(self)
+            self.locatorInput.setPlaceholderText("Enter locator value")
 
-        locatorLayout = QHBoxLayout()
-        locatorLayout.addWidget(self.locatorSelection)
-        locatorLayout.addWidget(self.locatorInput)
+            locatorLayout = QHBoxLayout()
+            locatorLayout.addWidget(self.locatorSelection)
+            locatorLayout.addWidget(self.locatorInput)
 
-        actionSelectionLayout.addLayout(locatorLayout)
+            actionSelectionLayout.addLayout(locatorLayout)
 
-        self.inputText = QLineEdit(self)
-        self.inputText.setPlaceholderText("Enter Text")
+            self.inputText = QLineEdit(self)
+            self.inputText.setPlaceholderText("Enter Text")
 
-        self.sleepInput = QLineEdit(self)
-        self.sleepInput.setPlaceholderText("Enter Sleep Time (in seconds)")
+            self.sleepInput = QLineEdit(self)
+            self.sleepInput.setPlaceholderText("Enter Sleep Time (in seconds)")
 
-        self.inputDescription = QLineEdit(self)
-        self.inputDescription.setPlaceholderText("Enter Description")
+            self.inputDescription = QLineEdit(self)
+            self.inputDescription.setPlaceholderText("Enter Description")
 
-        fieldsLayout = QVBoxLayout()
-        fieldsLayout.addWidget(self.inputText)
-        fieldsLayout.addWidget(self.sleepInput)
-        fieldsLayout.addWidget(self.inputDescription)
+            fieldsLayout = QVBoxLayout()
+            fieldsLayout.addWidget(self.inputText)
+            fieldsLayout.addWidget(self.sleepInput)
+            fieldsLayout.addWidget(self.inputDescription)
 
-        actionSelectionLayout.addLayout(fieldsLayout)
-        layout.addLayout(actionSelectionLayout)
+            actionSelectionLayout.addLayout(fieldsLayout)
+            layout.addLayout(actionSelectionLayout)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while setting up action selection: {e}")
 
     def setupButtonsAndStepsList(self, layout):
-        self.editMode = False
-        self.editIndex = None
+        try:
+            self.editMode = False
+            self.editIndex = None
 
-        self.generateReport = QCheckBox("Generate Report", self)
-        self.generateReport.setChecked(False)
-        self.generateReport.setToolTip("Generate a report after the automation is completed")
-        self.generateReport.setStyleSheet("padding-top: 10px;padding-bottom: 10px;")
-        layout.addWidget(self.generateReport)
+            self.generateReport = QCheckBox("Generate Report", self)
+            self.generateReport.setChecked(False)
+            self.generateReport.setToolTip("Generate a report after the automation is completed")
+            self.generateReport.setStyleSheet("padding-top: 10px;padding-bottom: 10px;")
+            layout.addWidget(self.generateReport)
 
-        self.addButton = QPushButton('Add Step', self)
-        self.addButton.clicked.connect(self.addOrEditStep)
+            self.addButton = QPushButton('Add Step', self)
+            self.addButton.clicked.connect(self.addOrEditStep)
 
-        self.removeButton = QPushButton('Remove Selected Step', self)
-        self.removeButton.clicked.connect(self.removeSelectedStep)
+            self.removeButton = QPushButton('Remove Selected Step', self)
+            self.removeButton.clicked.connect(self.removeSelectedStep)
 
-        self.editButton = QPushButton('Edit Selected Step', self)
-        self.editButton.clicked.connect(self.editSelectedStep)
+            self.editButton = QPushButton('Edit Selected Step', self)
+            self.editButton.clicked.connect(self.editSelectedStep)
 
-        self.saveButton = QPushButton('Save Changes', self)
-        self.saveButton.clicked.connect(self.saveEditedStep)
+            self.saveButton = QPushButton('Save Changes', self)
+            self.saveButton.clicked.connect(self.saveEditedStep)
 
-        self.saveButton.setEnabled(True)
-        self.saveButton.setVisible(False)
+            self.saveButton.setEnabled(True)
+            self.saveButton.setVisible(False)
 
-        self.stepsList = QListWidget(self)
+            self.stepsList = QListWidget(self)
 
-        self.startButton = QPushButton('Run', self)
-        self.startButton.clicked.connect(self.startAutomation)
+            self.startButton = QPushButton('Run', self)
+            self.startButton.clicked.connect(self.startAutomation)
 
-        self.moveUpButton = QPushButton('Up', self)
-        self.moveDownButton = QPushButton('Down', self)
-        self.moveUpButton.clicked.connect(self.moveStepUp)
-        self.moveDownButton.clicked.connect(self.moveStepDown)
+            self.moveUpButton = QPushButton('Up', self)
+            self.moveDownButton = QPushButton('Down', self)
+            self.moveUpButton.clicked.connect(self.moveStepUp)
+            self.moveDownButton.clicked.connect(self.moveStepDown)
 
-        self.locatorSelection.setVisible(False)
-        self.locatorInput.setVisible(False)
-        self.inputText.setVisible(False)
-        self.sleepInput.setVisible(False)
-        self.inputDescription.setVisible(False)
+            self.moveUpButton.setProperty("class", "secondary-btn")
+            self.moveDownButton.setProperty("class", "secondary-btn")
 
-        buttonsLayout = QHBoxLayout()
-        buttonsLayout.addWidget(self.addButton)
-        buttonsLayout.addWidget(self.editButton)
-        buttonsLayout.addWidget(self.saveButton)
-        buttonsLayout.addWidget(self.removeButton)
-        buttonsLayout.addWidget(self.moveUpButton)
-        buttonsLayout.addWidget(self.moveDownButton)
-        buttonsLayout.addWidget(self.startButton)
-
-        self.startButton.setStyleSheet("""
-            QPushButton {
-                color: white;
-                background-color: #28A745;
-                border-radius: 4px;
-                padding: 6px 12px;
-                border: none;
-                font-size: 12px;
-            }
-
-            QPushButton:hover {
-                background-color: #218838;
-                border-color: #1E7E34;
-            }
-
-            QPushButton:pressed {
-                background-color: #1D7D33;
-                border-color: #1C7430;
-            }
-        """)
-
-        layout.addLayout(buttonsLayout)
-        layout.addWidget(self.stepsList)
-
-    def updateLocatorFields(self):
-        locator_type = self.locatorSelection.currentText()
-        self.locatorInput.setVisible(locator_type != 'Select Locator')
-
-    def removeSelectedStep(self):
-        selected_item = self.stepsList.currentRow()
-        if selected_item >= 0:
-            del self.steps[selected_item]
-            self.stepsList.takeItem(selected_item)
-            self.logger.info(f"Removed step at index {selected_item}.")
-        else:
-            QMessageBox.warning(self, "No Selection", "Please select a step to remove.")
-
-    def updateFields(self):
-        action = self.actionSelection.currentText()
-
-        if action in ['Click Element', 'Input Text']:
-            self.locatorSelection.setVisible(True)
-            self.locatorInput.setVisible(True)
-        else:
             self.locatorSelection.setVisible(False)
             self.locatorInput.setVisible(False)
+            self.inputText.setVisible(False)
+            self.sleepInput.setVisible(False)
+            self.inputDescription.setVisible(False)
 
-        self.inputText.setVisible(
-            action in ['Input Text', 'Execute Python Script', 'Execute JavaScript', 'Navigate to URL',
-                       'Take Screenshot'])
-        self.sleepInput.setVisible(action == 'Sleep')
-        self.inputDescription.setVisible(
-            action in ['Click Element', 'Input Text', 'Sleep', 'Navigate to URL', 'Execute Python Script',
-                       'Execute JavaScript'])
+            buttonsLayout = QHBoxLayout()
+            buttonsLayout.addWidget(self.addButton)
+            buttonsLayout.addWidget(self.editButton)
+            buttonsLayout.addWidget(self.saveButton)
+            buttonsLayout.addWidget(self.removeButton)
+            buttonsLayout.addWidget(self.moveUpButton)
+            buttonsLayout.addWidget(self.moveDownButton)
+            buttonsLayout.addWidget(self.startButton)
 
-        if action == 'Navigate to URL':
-            self.inputText.setPlaceholderText("Enter URL")
-        elif action == 'Input Text':
-            self.inputText.setPlaceholderText("Enter Text")
-        elif action == 'Execute Python Script':
-            self.inputText.setPlaceholderText("Enter Script Path")
-        elif action == 'Execute JavaScript':
-            self.inputText.setPlaceholderText("Enter JavaScript Code")
-        elif action == 'Sleep':
-            self.inputText.setPlaceholderText("Enter Sleep Time (in seconds)")
-        elif action == 'Take Screenshot':
-            self.inputText.setPlaceholderText("Enter Screenshot Name")
-        else:
-            self.inputText.setPlaceholderText("Enter Text")
-
-    class ResultsWindow(QDialog):
-        def __init__(self, parent=None):
-            super().__init__(parent)
-            self.setWindowTitle(f"Results for {parent.testName.text()}")
-            self.setGeometry(100, 100, 600, 400)
-
-            self.testNameLabel = QLabel(f"{parent.testName.text()}", self)
-            self.testNameLabel.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
-
-            self.testDescriptionLabel = QLabel(f"{parent.testDescription.text()}", self)
-            self.testDescriptionLabel.setStyleSheet("font-size: 14px; margin-bottom: 10px;")
-            self.testDescriptionLabel.setWordWrap(True)
-            self.testDescriptionLabel.setMaximumWidth(550)
-
-            self.browserOptionsLabel = QLabel(f"Performed on {parent.browserLabel.text()}, with the following options:",
-                                              self)
-            self.browserOptionsLabel.setStyleSheet("font-size: 14px; margin-bottom: 10px;")
-            self.browserOptionsLabel.setWordWrap(True)
-            self.browserOptionsLabel.setMaximumWidth(550)
-
-            for checkbox in parent.findChildren(QCheckBox):
-                if checkbox.isChecked():
-                    if checkbox.text() == "Generate Report":
-                        continue
-                    self.browserOptionsLabel.setText(f"{self.browserOptionsLabel.text()}\n - {checkbox.text()}")
-
-            self.resultsTable = QTableWidget(self)
-            self.resultsTable.setColumnCount(2)
-            self.resultsTable.setHorizontalHeaderLabels(["Step", "Status"])
-            self.resultsTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            self.resultsTable.verticalHeader().setVisible(False)
-            self.resultsTable.setEditTriggers(QTableWidget.NoEditTriggers)
-            self.resultsTable.setAlternatingRowColors(True)
-            self.resultsTable.setShowGrid(False)
-
-            self.resultsTable.setStyleSheet("""
-                QTableWidget {
-                    border: 1px solid #ddd;
-                    border-radius: 4px;
-                    color: #555;
-                    background-color: #f5f5f5;
-                }
-                QTableWidget::item {
-                    padding: 4px;
-                    color: #555;
-                }
-                QTableWidget::item:selected {
-                    background-color: #007BFF;
+            self.startButton.setStyleSheet("""
+                QPushButton {
                     color: white;
+                    background-color: #28A745;
+                    border-radius: 4px;
+                    padding: 6px 12px;
+                    border: none;
+                    font-size: 12px;
+                }
+    
+                QPushButton:hover {
+                    background-color: #218838;
+                    border-color: #1E7E34;
+                }
+    
+                QPushButton:pressed {
+                    background-color: #1D7D33;
+                    border-color: #1C7430;
                 }
             """)
 
-            self.exportButton = QPushButton('Export Report', self)
-            self.exportButton.clicked.connect(self.exportReport)
+            layout.addLayout(buttonsLayout)
+            layout.addWidget(self.stepsList)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while setting up buttons and steps list: {e}")
 
-            self.copyJiraMarkdownButton = QPushButton('Copy to JIRA Markdown', self)
-            self.copyJiraMarkdownButton.clicked.connect(self.copyJiraMarkdown)
+    def updateLocatorFields(self):
+        try:
+            locator_type = self.locatorSelection.currentText()
+            self.locatorInput.setVisible(locator_type != 'Select Locator')
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while updating locator fields: {e}")
 
-            layout = QVBoxLayout(self)
-            layout.addWidget(self.testNameLabel)
-            layout.addWidget(self.testDescriptionLabel)
-            layout.addWidget(self.browserOptionsLabel)
-            layout.addWidget(self.resultsTable)
-            layout.addWidget(self.exportButton)
-            layout.addWidget(self.copyJiraMarkdownButton)
-            self.setLayout(layout)
+    def removeSelectedStep(self):
+        try:
+            selected_item = self.stepsList.currentRow()
+            if selected_item >= 0:
+                del self.steps[selected_item]
+                self.stepsList.takeItem(selected_item)
+                self.logger.info(f"Removed step at index {selected_item}.")
+            else:
+                QMessageBox.warning(self, "No Selection", "Please select a step to remove.")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while removing selected step: {e}")
+
+    def updateFields(self):
+        try:
+            action = self.actionSelection.currentText()
+
+            if action in ['Click Element', 'Input Text']:
+                self.locatorSelection.setVisible(True)
+                self.locatorInput.setVisible(True)
+            else:
+                self.locatorSelection.setVisible(False)
+                self.locatorInput.setVisible(False)
+
+            self.inputText.setVisible(
+                action in ['Input Text', 'Execute Python Script', 'Execute JavaScript', 'Navigate to URL',
+                           'Take Screenshot'])
+            self.sleepInput.setVisible(action == 'Sleep')
+            self.inputDescription.setVisible(
+                action in ['Click Element', 'Input Text', 'Sleep', 'Navigate to URL', 'Execute Python Script',
+                           'Execute JavaScript'])
+
+            if action == 'Navigate to URL':
+                self.inputText.setPlaceholderText("Enter URL")
+            elif action == 'Input Text':
+                self.inputText.setPlaceholderText("Enter Text")
+            elif action == 'Execute Python Script':
+                self.inputText.setPlaceholderText("Enter Script Path")
+            elif action == 'Execute JavaScript':
+                self.inputText.setPlaceholderText("Enter JavaScript Code")
+            elif action == 'Sleep':
+                self.inputText.setPlaceholderText("Enter Sleep Time (in seconds)")
+            elif action == 'Take Screenshot':
+                self.inputText.setPlaceholderText("Enter Screenshot Name")
+            else:
+                self.inputText.setPlaceholderText("Enter Text")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while updating fields: {e}")
+
+    class ResultsWindow(QDialog):
+        def __init__(self, parent=None):
+            try:
+                super().__init__(parent)
+                self.setWindowTitle(f"Results for {parent.testName.text()}")
+                self.setGeometry(100, 100, 600, 600)
+
+                self.testNameLabel = QLabel(parent.testName.text(), self)
+                self.testNameLabel.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
+                self.testNameLabel.setMaximumWidth(550)
+
+                self.testDescriptionLabel = QLabel(parent.testDescription.text(), self)
+                self.testDescriptionLabel.setStyleSheet("font-size: 12px; margin-bottom: 10px;")
+                self.testDescriptionLabel.setWordWrap(True)
+                self.testDescriptionLabel.setMaximumWidth(550)
+
+                if any(checkbox.isChecked() for checkbox in self.findChildren(QCheckBox)):
+                    self.browserOptionsLabel = QLabel(
+                        f"Performed on {parent.browserLabel.text()}, with the following options:",
+                        self)
+                    self.browserOptionsLabel.setWordWrap(True)
+                    self.browserOptionsLabel.setMaximumWidth(550)
+
+                    for checkbox in parent.findChildren(QCheckBox):
+                        if checkbox.isChecked():
+                            if checkbox.text() == "Generate Report":
+                                continue
+                            self.browserOptionsLabel.setText(f"{self.browserOptionsLabel.text()}\n - {checkbox.text()}")
+                        else:
+                            self.browserOptionsLabel.setText(
+                                f"{self.browserOptionsLabel.text()}\n\nNo options selected.\n")
+                else:
+                    self.browserOptionsLabel = QLabel("Performed on Chrome, with no options selected.", self)
+                    self.browserOptionsLabel.setWordWrap(True)
+                    self.browserOptionsLabel.setMaximumWidth(550)
+
+                self.resultsTable = QTableWidget(self)
+                self.resultsTable.setColumnCount(2)
+                self.resultsTable.setHorizontalHeaderLabels(["Step", "Status"])
+                self.resultsTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+                self.resultsTable.verticalHeader().setVisible(False)
+                self.resultsTable.setEditTriggers(QTableWidget.NoEditTriggers)
+                self.resultsTable.setAlternatingRowColors(True)
+                self.resultsTable.setShowGrid(False)
+
+                self.resultsTable.setStyleSheet("""
+                    QTableWidget {
+                        border: 1px solid #ddd;
+                        border-radius: 4px;
+                        color: #555;
+                        background-color: #f5f5f5;
+                    }
+                    QTableWidget::item {
+                        padding: 4px;
+                        color: #555;
+                    }
+                    QTableWidget::item:selected {
+                        background-color: #007BFF;
+                        color: white;
+                    }
+                """)
+
+                self.exportButton = QPushButton('Export Report', self)
+                self.exportButton.clicked.connect(self.exportReport)
+
+                self.buttonGroupBox = QGroupBox("Actions", self)
+                buttonGroupLayout = QHBoxLayout()
+
+                self.copyJiraMarkdownButton = QPushButton('Copy to JIRA description', self.buttonGroupBox)
+                self.copyJiraMarkdownButton.clicked.connect(self.copyJiraMarkdown)
+                self.copyJiraMarkdownButton.setProperty("class", "secondary-btn")
+                buttonGroupLayout.addWidget(self.copyJiraMarkdownButton)
+
+                self.newButton = QPushButton('New Button', self.buttonGroupBox)
+                self.newButton.setProperty("class", "secondary-btn")
+                buttonGroupLayout.addWidget(self.newButton)
+
+                self.buttonGroupBox.setLayout(buttonGroupLayout)
+
+                layout = QVBoxLayout(self)
+                layout.addWidget(self.testNameLabel)
+                layout.addWidget(self.testDescriptionLabel)
+                layout.addWidget(self.browserOptionsLabel)
+                layout.addWidget(self.resultsTable)
+                layout.addWidget(self.buttonGroupBox)
+                layout.addWidget(self.exportButton)
+                self.setLayout(layout)
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Error while initializing results window: {e}")
 
         def copyJiraMarkdown(self):
-            jiraMarkdown = self.parent().generateBugForJira()
-            clipboard = QApplication.clipboard()
-            clipboard.setText(jiraMarkdown)
-            QMessageBox.information(self, "Copied", "JIRA Markdown copied to clipboard.")
+            try:
+                jiraMarkdown = self.parent().generateBugForJira()
+                clipboard = QApplication.clipboard()
+                clipboard.setText(jiraMarkdown)
+                QMessageBox.information(self, "Copied", "JIRA Markdown copied to clipboard.")
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Error while copying JIRA Markdown: {e}")
 
         def exportReport(self):
-            data = []
-            for row in range(self.resultsTable.rowCount()):
-                step = self.resultsTable.item(row, 0).text()
-                status = self.resultsTable.item(row, 1).text()
-                data.append([step, status])
+            try:
+                data = []
+                for i in range(self.resultsTable.rowCount()):
+                    data.append([self.resultsTable.item(i, 0).text(), self.resultsTable.item(i, 1).text()])
 
-            df = pd.DataFrame(data, columns=["Step", "Status"])
-
-            options = QFileDialog.Options()
-            fileName, _ = QFileDialog.getSaveFileName(self, "Export Report", "", "Excel Files (*.xlsx)",
-                                                      options=options)
-            if fileName:
-                if not fileName.endswith('.xlsx'):
-                    fileName += '.xlsx'
-                df.to_excel(fileName, index=False)
+                df = pd.DataFrame(data, columns=["Step", "Status"])
+                df.to_excel(f"{self.parent().testName.text()}.xlsx", index=False)
+                QMessageBox.information(self, "Exported", "Report exported successfully.")
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Error while exporting report: {e}")
 
     def startAutomation(self):
-        chromeOptionsMapping = {
-            "Headless Mode": "--headless",
-            "Disable GPU": "--disable-gpu",
-            "Incognito Mode": "--incognito",
-            "Disable Popup Blocking": "--disable-popup-blocking",
-            "Disable Infobars": "--disable-infobars",
-            "Disable Extensions": "--disable-extensions",
-            "Disable Dev Shm Usage": "--disable-dev-shm-usage",
-            "Ignore Certificate Errors": "--ignore-certificate-errors",
-            "Custom User Agent": "--user-agent",
-            "Disable JavaScript": "--disable-javascript",
-            "Disable Images": "--blink-settings=imagesEnabled=false",
-            "Enable Network Throttling": "--enable-network-throttling",
-            "Enable Performance Logging": "--enable-performance-logging",
-            "Enable GPU Hardware Acceleration": "--enable-gpu-rasterization",
-            "Remote Debugging Port": "--remote-debugging-port",
-            "Proxy Settings": "--proxy-server",
-            "Enable Automation": "--enable-automation",
-            "No Sandbox": "--no-sandbox",
-            "Disable Web Security": "--disable-web-security",
-            "Enable Experimental Features": "--enable-experimental-web-platform-features",
-            "Disable Password Manager": "--disable-password-manager-reauthentication",
-            "Disable Autofill": "--disable-autofill-keyboard-accessory-view",
-            "Disable Filesystem API": "--disable-filesystem",
-            "Disable Geolocation": "--disable-geolocation",
-        }
-
-        edgeOptionsMapping = {
-            "Headless Mode": "headless",
-            "Disable GPU": "disable-gpu",
-            "InPrivate Mode": "InPrivate",
-            "Disable Popup Blocking": "disable-popup-blocking",
-            "Disable Extensions": "disable-extensions",
-            "Ignore Certificate Errors": "ignore-certificate-errors",
-            "Custom User Agent": "user-agent",
-            "Disable JavaScript": "disable-javascript",
-            "Disable Images": "disable-images",
-            "Enable Network Throttling": "enable-network-throttling",
-            "Enable Performance Logging": "enable-performance-logging",
-            "Enable GPU Hardware Acceleration": "enable-gpu-rasterization",
-            "Remote Debugging Port": "remote-debugging-port",
-            "Proxy Settings": "proxy-server",
-            "Enable Automation": "enable-automation",
-            "No Sandbox": "no-sandbox",
-            "Disable Web Security": "disable-web-security",
-            "Enable Experimental Features": "enable-experimental-web-platform-features",
-            "Disable Password Manager": "disable-password-manager",
-            "Disable Autofill": "disable-autofill",
-            "Disable Filesystem API": "disable-filesystem",
-            "Disable Geolocation": "disable-geolocation",
-        }
-
-        browser_type = self.loadSetting("defaultBrowser", "Chrome")
-
-        chrome_driver_location = self.loadSetting("driverLocation", "chromedriver.exe")
-        msedge_driver_location = self.loadSetting("msedgeLocation", "msedgedriver.exe")
-
         try:
-            if browser_type == "Chrome":
-                chrome_options = Options()
-                for checkbox in self.findChildren(QCheckBox):
-                    selenium_option = chromeOptionsMapping.get(checkbox.text())
-                    if selenium_option and checkbox.isChecked():
-                        chrome_options.add_argument(selenium_option)
-
-                if not os.path.isfile(chrome_driver_location):
-                    raise ValueError("Invalid Chrome driver location")
-                self.logger.info("Starting Chrome browser with WebDriver at: " + chrome_driver_location)
-                self.driver = webdriver.Chrome(chrome_options)
-            elif browser_type == "Edge":
-                edge_options = EdgeOptions()
-                for checkbox in self.findChildren(QCheckBox):
-                    selenium_option = edgeOptionsMapping.get(checkbox.text())
-                    if selenium_option and checkbox.isChecked():
-                        edge_options.add_argument(selenium_option)
-
-                if not os.path.isfile(msedge_driver_location):
-                    raise ValueError("Invalid Edge driver location")
-                self.logger.info("Starting Edge browser with WebDriver at: " + msedge_driver_location)
-                self.driver = webdriver.Edge(edge_options)
-
-            else:
-                raise ValueError("Unsupported browser type")
-
-            locator_strategies = {
-                'XPath': By.XPATH,
-                'CSS Selector': By.CSS_SELECTOR,
-                'ID': By.ID,
-                'Name': By.NAME,
-                'Class Name': By.CLASS_NAME,
-                'Tag Name': By.TAG_NAME,
-                'Link Text': By.LINK_TEXT,
-                'Partial Link Text': By.PARTIAL_LINK_TEXT
+            chromeOptionsMapping = {
+                "Headless Mode": "--headless",
+                "Disable GPU": "--disable-gpu",
+                "Incognito Mode": "--incognito",
+                "Disable Popup Blocking": "--disable-popup-blocking",
+                "Disable Infobars": "--disable-infobars",
+                "Disable Extensions": "--disable-extensions",
+                "Disable Dev Shm Usage": "--disable-dev-shm-usage",
+                "Ignore Certificate Errors": "--ignore-certificate-errors",
+                "Custom User Agent": "--user-agent",
+                "Disable JavaScript": "--disable-javascript",
+                "Disable Images": "--blink-settings=imagesEnabled=false",
+                "Enable Network Throttling": "--enable-network-throttling",
+                "Enable Performance Logging": "--enable-performance-logging",
+                "Enable GPU Hardware Acceleration": "--enable-gpu-rasterization",
+                "Remote Debugging Port": "--remote-debugging-port",
+                "Proxy Settings": "--proxy-server",
+                "Enable Automation": "--enable-automation",
+                "No Sandbox": "--no-sandbox",
+                "Disable Web Security": "--disable-web-security",
+                "Enable Experimental Features": "--enable-experimental-web-platform-features",
+                "Disable Password Manager": "--disable-password-manager-reauthentication",
+                "Disable Autofill": "--disable-autofill-keyboard-accessory-view",
+                "Disable Filesystem API": "--disable-filesystem",
+                "Disable Geolocation": "--disable-geolocation",
             }
 
-            if self.generateReport.isChecked():
-                results_window = self.ResultsWindow(self)
-                results_window.resultsTable.setRowCount(len(self.steps))
+            edgeOptionsMapping = {
+                "Headless Mode": "headless",
+                "Disable GPU": "disable-gpu",
+                "InPrivate Mode": "InPrivate",
+                "Disable Popup Blocking": "disable-popup-blocking",
+                "Disable Extensions": "disable-extensions",
+                "Ignore Certificate Errors": "ignore-certificate-errors",
+                "Custom User Agent": "user-agent",
+                "Disable JavaScript": "disable-javascript",
+                "Disable Images": "disable-images",
+                "Enable Network Throttling": "enable-network-throttling",
+                "Enable Performance Logging": "enable-performance-logging",
+                "Enable GPU Hardware Acceleration": "enable-gpu-rasterization",
+                "Remote Debugging Port": "remote-debugging-port",
+                "Proxy Settings": "proxy-server",
+                "Enable Automation": "enable-automation",
+                "No Sandbox": "no-sandbox",
+                "Disable Web Security": "disable-web-security",
+                "Enable Experimental Features": "enable-experimental-web-platform-features",
+                "Disable Password Manager": "disable-password-manager",
+                "Disable Autofill": "disable-autofill",
+                "Disable Filesystem API": "disable-filesystem",
+                "Disable Geolocation": "disable-geolocation",
+            }
 
-            self.results = []
+            browser_type = self.loadSetting("defaultBrowser", "Chrome")
 
-            for step in self.steps:
-                action = step[0]
-                try:
-                    if action == 'Navigate to URL':
-                        self.driver.get(step[1])
-                    elif action in ['Click Element', 'Input Text']:
-                        locator_type = step[1]
-                        locator_value = step[2]
-                        element = self.driver.find_element(locator_strategies[locator_type], locator_value)
-                        if action == 'Click Element':
-                            element.click()
-                        else:
-                            element.send_keys(step[3])
-                    elif action == 'Take Screenshot':
-                        self.driver.save_screenshot(step[1])
-                    elif action == 'Execute JavaScript':
-                        self.driver.execute_script(step[1])
-                    elif action == 'Sleep':
-                        time.sleep(float(step[1]))
-                    elif action == 'Maximize Window':
-                        self.driver.maximize_window()
+            chrome_driver_location = self.loadSetting("driverLocation", "chromedriver.exe")
+            msedge_driver_location = self.loadSetting("msedgeLocation", "msedgedriver.exe")
 
-                    self.results.append((step, 'Passed'))
+            try:
+                if browser_type == "Chrome":
+                    chrome_options = Options()
+                    for checkbox in self.findChildren(QCheckBox):
+                        selenium_option = chromeOptionsMapping.get(checkbox.text())
+                        if selenium_option and checkbox.isChecked():
+                            chrome_options.add_argument(selenium_option)
 
-                except Exception as e:
-                    self.logger.error(f"Error in {action}: {e}")
-                    self.results.append((step, 'Failed'))
+                    if not os.path.isfile(chrome_driver_location):
+                        raise ValueError("Invalid Chrome driver location")
+                    self.logger.info("Starting Chrome browser with WebDriver at: " + chrome_driver_location)
+                    self.driver = webdriver.Chrome(chrome_options)
+                elif browser_type == "Edge":
+                    edge_options = EdgeOptions()
+                    for checkbox in self.findChildren(QCheckBox):
+                        selenium_option = edgeOptionsMapping.get(checkbox.text())
+                        if selenium_option and checkbox.isChecked():
+                            edge_options.add_argument(selenium_option)
 
-            self.driver.quit()
+                    if not os.path.isfile(msedge_driver_location):
+                        raise ValueError("Invalid Edge driver location")
+                    self.logger.info("Starting Edge browser with WebDriver at: " + msedge_driver_location)
+                    self.driver = webdriver.Edge(edge_options)
 
-            if self.generateReport.isChecked():
-                self.displayResults(self.results)
+                else:
+                    raise ValueError("Unsupported browser type")
 
-            self.logger.info("\n\nOperation completed successfully.\n")
+                locator_strategies = {
+                    'XPath': By.XPATH,
+                    'CSS Selector': By.CSS_SELECTOR,
+                    'ID': By.ID,
+                    'Name': By.NAME,
+                    'Class Name': By.CLASS_NAME,
+                    'Tag Name': By.TAG_NAME,
+                    'Link Text': By.LINK_TEXT,
+                    'Partial Link Text': By.PARTIAL_LINK_TEXT
+                }
 
+                if self.generateReport.isChecked():
+                    results_window = self.ResultsWindow(self)
+                    results_window.resultsTable.setRowCount(len(self.steps))
+
+                self.results = []
+
+                for step in self.steps:
+                    action = step[0]
+                    try:
+                        if action == 'Navigate to URL':
+                            self.driver.get(step[1])
+                        elif action in ['Click Element', 'Input Text']:
+                            locator_type = step[1]
+                            locator_value = step[2]
+                            element = self.driver.find_element(locator_strategies[locator_type], locator_value)
+                            if action == 'Click Element':
+                                element.click()
+                            else:
+                                element.send_keys(step[3])
+                        elif action == 'Take Screenshot':
+                            self.driver.save_screenshot(step[1])
+                        elif action == 'Execute JavaScript':
+                            self.driver.execute_script(step[1])
+                        elif action == 'Sleep':
+                            time.sleep(float(step[1]))
+                        elif action == 'Maximize Window':
+                            self.driver.maximize_window()
+
+                        self.results.append((step, 'Passed'))
+
+                    except Exception as e:
+                        self.logger.error(f"Error in {action}: {e}")
+                        self.results.append((step, 'Failed'))
+
+                self.driver.quit()
+
+                if self.generateReport.isChecked():
+                    self.displayResults(self.results)
+
+                self.logger.info("\n\nOperation completed successfully.\n")
+
+            except Exception as e:
+                self.logger.error(f"Error: {e}")
+                QMessageBox.critical(self, "Error", str(e))
         except Exception as e:
-            self.logger.error(f"Error: {e}")
-            QMessageBox.critical(self, "Error", str(e))
+            QMessageBox.warning(self, "Error", f"Error while running the script: {e}")
 
     def formatStepText(self, step):
-        action = step[0]
-        if action == 'Sleep':
-            return f'Sleep for {step[1]} seconds'
-        elif action in ['Click Element', 'Input Text']:
-            return f'{action} at {step[1]}: {step[2]}'
-        elif action in ['Navigate to URL', 'Execute JavaScript', 'Execute Python Script']:
-            return f'{action}: {step[1]}'
-        elif action == 'Take Screenshot':
-            return f'Take screenshot: {step[1]}'
-        elif action == 'Maximize Window':
-            return 'Maximize Window'
-        else:
-            return 'Unknown Action'
+        try:
+            action = step[0]
+            if action == 'Sleep':
+                return f'Sleep for {step[1]} seconds'
+            elif action in ['Click Element', 'Input Text']:
+                return f'{action} at {step[1]}: {step[2]}'
+            elif action in ['Navigate to URL', 'Execute JavaScript', 'Execute Python Script']:
+                return f'{action}: {step[1]}'
+            elif action == 'Take Screenshot':
+                return f'Take screenshot: {step[1]}'
+            elif action == 'Maximize Window':
+                return 'Maximize Window'
+            else:
+                return 'Unknown Action'
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while formatting step text: {e}")
 
     def displayResults(self, results):
-        results_window = self.ResultsWindow(self)
-        results_window.resultsTable.setRowCount(len(results))
+        try:
+            results_window = self.ResultsWindow(self)
+            results_window.resultsTable.setRowCount(len(results))
 
-        for index, (step, status) in enumerate(results):
-            step_text = self.formatStepText(step)
-            step_item = QTableWidgetItem(step_text)
-            status_item = QTableWidgetItem(status)
+            for index, (step, status) in enumerate(results):
+                step_text = self.formatStepText(step)
+                step_item = QTableWidgetItem(step_text)
+                status_item = QTableWidgetItem(status)
 
-            if status == 'Passed':
-                status_item.setBackground(QColor(203, 255, 171))
-            else:
-                status_item.setBackground(QColor(255, 171, 171))
+                if status == 'Passed':
+                    status_item.setBackground(QColor(203, 255, 171))
+                else:
+                    status_item.setBackground(QColor(255, 171, 171))
 
-            results_window.resultsTable.setItem(index, 0, step_item)
-            results_window.resultsTable.setItem(index, 1, status_item)
+                results_window.resultsTable.setItem(index, 0, step_item)
+                results_window.resultsTable.setItem(index, 1, status_item)
 
-        results_window.exec_()
+            results_window.exec_()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while displaying results: {e}")
 
     def setupLogging(self):
-        self.logger = logging.getLogger('Atom8')
-        logging.basicConfig(level=logging.INFO)
+        try:
+            self.logger = logging.getLogger('Atom8')
+            logging.basicConfig(level=logging.INFO)
 
-        logTextBox = QTextEditLogger(self.logViewer)
-        logTextBox.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-        logging.getLogger().addHandler(logTextBox)
-        logging.getLogger().setLevel(logging.DEBUG)
+            logTextBox = QTextEditLogger(self.logViewer)
+            logTextBox.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+            logging.getLogger().addHandler(logTextBox)
+            logging.getLogger().setLevel(logging.DEBUG)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while setting up logging: {e}")
 
     def showAboutDialog(self):
-        QMessageBox.about(self, "About Atom8", """
+        try:
+            QMessageBox.about(self, "About Atom8", """
         <html>
         <head>
             <style> 
@@ -1008,9 +1093,12 @@ class Atom8(QMainWindow):
         </body>
         </html>
         """)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while showing about dialog: {e}")
 
     def showHelpDialog(self):
-        QMessageBox.about(self, "Setup Drivers", """
+        try:
+            QMessageBox.about(self, "Setup Drivers", """
         <html>
         <head>
             <style>
@@ -1030,12 +1118,12 @@ class Atom8(QMainWindow):
         </body>
         </html>
         """)
-
-    def generateReport(self):
-        pass
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while showing help dialog: {e}")
 
     def howToUseDialog(self):
-        QMessageBox.about(self, "How to use", """
+        try:
+            QMessageBox.about(self, "How to use", """
         <html>
         <head>
             <style>
@@ -1063,57 +1151,68 @@ class Atom8(QMainWindow):
         </body>
         </html>
         """)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while showing how to use dialog: {e}")
 
     def saveFile(self):
-        fileName, _ = QFileDialog.getSaveFileName(self, "Save As", "", "Atom8 Files (*.atm8)")
-        if fileName:
-            self.currentFilePath = fileName
-            self.updateRecentFiles(fileName)
-            with open(fileName, "w+") as file:
-                file_content = {
-                    "testName": self.testName.text(),
-                    "testDescription": self.testDescription.text(),
-                    "steps": self.steps
-                }
-                json.dump(file_content, file)
-            self.statusBar.showMessage(f"File saved as {fileName} successfully.", 5000)
+        try:
+            fileName, _ = QFileDialog.getSaveFileName(self, "Save As", "", "Atom8 Files (*.atm8)")
+            if fileName:
+                self.currentFilePath = fileName
+                self.updateRecentFiles(fileName)
+                with open(fileName, "w+") as file:
+                    file_content = {
+                        "testName": self.testName.text(),
+                        "testDescription": self.testDescription.text(),
+                        "steps": self.steps
+                    }
+                    json.dump(file_content, file)
+                self.statusBar.showMessage(f"File saved as {fileName} successfully.", 5000)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while saving file: {e}")
 
     def realSaveFile(self):
-        if self.currentFilePath:
-            with open(self.currentFilePath, "w") as file:
-                file_content = {
-                    "testName": self.testName.text(),
-                    "testDescription": self.testDescription.text(),
-                    "steps": self.steps
-                }
-                json.dump(file_content, file)
-            self.statusBar.showMessage(f"File {self.currentFilePath} saved successfully.", 5000)
-        else:
-            self.saveFile()
+        try:
+            if self.currentFilePath:
+                with open(self.currentFilePath, "w") as file:
+                    file_content = {
+                        "testName": self.testName.text(),
+                        "testDescription": self.testDescription.text(),
+                        "steps": self.steps
+                    }
+                    json.dump(file_content, file)
+                self.statusBar.showMessage(f"File {self.currentFilePath} saved successfully.", 5000)
+            else:
+                self.saveFile()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while saving file: {e}")
 
     def openFile(self):
-        fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "Atom8 Files (*.atm8)")
-        if fileName:
-            self.currentFilePath = fileName
-            self.updateRecentFiles(fileName)
-            try:
-                with open(fileName, "r") as file:
-                    file_content = json.load(file)
-                    if not isinstance(file_content, dict) or "steps" not in file_content:
-                        raise ValueError("File content is not in the expected format")
+        try:
+            fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "Atom8 Files (*.atm8)")
+            if fileName:
+                self.currentFilePath = fileName
+                self.updateRecentFiles(fileName)
+                try:
+                    with open(fileName, "r") as file:
+                        file_content = json.load(file)
+                        if not isinstance(file_content, dict) or "steps" not in file_content:
+                            raise ValueError("File content is not in the expected format")
 
-                    self.testName.setText(file_content.get("testName", ""))
-                    self.testDescription.setText(file_content.get("testDescription", ""))
-                    self.steps = file_content["steps"]
-                    self.stepsList.clear()
-                    for index, step in enumerate(self.steps):
-                        if not isinstance(step, (list, tuple)):
-                            QMessageBox.critical(self, "Error", f"Invalid step format at index {index}: {step}")
-                            continue
-                        display_text = self.constructStepDisplayText(step)
-                        self.stepsList.addItem(display_text)
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to open file: {e}")
+                        self.testName.setText(file_content.get("testName", ""))
+                        self.testDescription.setText(file_content.get("testDescription", ""))
+                        self.steps = file_content["steps"]
+                        self.stepsList.clear()
+                        for index, step in enumerate(self.steps):
+                            if not isinstance(step, (list, tuple)):
+                                QMessageBox.critical(self, "Error", f"Invalid step format at index {index}: {step}")
+                                continue
+                            display_text = self.constructStepDisplayText(step)
+                            self.stepsList.addItem(display_text)
+                except Exception as e:
+                    QMessageBox.critical(self, "Error", f"Failed to open file: {e}")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while opening file: {e}")
 
     def constructStepDisplayText(self, step):
         try:
@@ -1139,90 +1238,105 @@ class Atom8(QMainWindow):
         self.clearLogs()
 
     def prefs(self):
-        self.prefsWindow = QDialog(self, Qt.Window)
-        self.prefsWindow.setWindowTitle("Preferences")
-        prefsLayout = QVBoxLayout()
+        try:
+            self.prefsWindow = QDialog(self, Qt.Window)
+            self.prefsWindow.setWindowTitle("Preferences")
+            prefsLayout = QVBoxLayout()
 
-        browserLabel = QLabel("Default Browser:")
-        self.browserComboBox = QComboBox()
-        self.browserComboBox.addItems(["Chrome", "Firefox", "Safari", "Edge"])
-        self.browserComboBox.setCurrentText(self.loadSetting("defaultBrowser", "Chrome"))
+            browserLabel = QLabel("Default Browser:")
+            self.browserComboBox = QComboBox()
+            self.browserComboBox.addItems(["Chrome", "Firefox", "Safari", "Edge"])
+            self.browserComboBox.setCurrentText(self.loadSetting("defaultBrowser", "Chrome"))
 
-        browserLayout = QHBoxLayout()
-        browserLayout.addWidget(browserLabel)
-        browserLayout.addWidget(self.browserComboBox)
-        prefsLayout.addLayout(browserLayout)
+            browserLayout = QHBoxLayout()
+            browserLayout.addWidget(browserLabel)
+            browserLayout.addWidget(self.browserComboBox)
+            prefsLayout.addLayout(browserLayout)
 
-        savePathLabel = QLabel("Default Screenshots Save Path:")
-        self.savePathLineEdit = QLineEdit()
-        current_save_path = self.loadSetting("savePath", "")
-        if current_save_path:
-            self.savePathLineEdit.setText(current_save_path)
+            savePathLabel = QLabel("Default Screenshots Save Path:")
+            self.savePathLineEdit = QLineEdit()
+            current_save_path = self.loadSetting("savePath", "")
+            if current_save_path:
+                self.savePathLineEdit.setText(current_save_path)
 
-        savePathButton = QPushButton("Choose")
-        savePathButton.clicked.connect(self.chooseSavePathLocation)
-        savePathLayout = QHBoxLayout()
-        savePathLayout.addWidget(savePathLabel)
-        savePathLayout.addWidget(self.savePathLineEdit)
-        savePathLayout.addWidget(savePathButton)
-        prefsLayout.addLayout(savePathLayout)
+            savePathButton = QPushButton("Choose")
+            savePathButton.clicked.connect(self.chooseSavePathLocation)
+            savePathLayout = QHBoxLayout()
+            savePathLayout.addWidget(savePathLabel)
+            savePathLayout.addWidget(self.savePathLineEdit)
+            savePathLayout.addWidget(savePathButton)
+            prefsLayout.addLayout(savePathLayout)
 
-        driverLocationLabel = QLabel("Chrome Driver Location:")
-        self.driverLocationLineEdit = QLineEdit()
-        self.driverLocationLineEdit.setText(self.loadSetting("driverLocation", ""))
-        driverLocationButton = QPushButton("Choose")
-        driverLocationButton.clicked.connect(self.chooseChromeDriverLocation)
+            driverLocationLabel = QLabel("Chrome Driver Location:")
+            self.driverLocationLineEdit = QLineEdit()
+            self.driverLocationLineEdit.setText(self.loadSetting("driverLocation", ""))
+            driverLocationButton = QPushButton("Choose")
+            driverLocationButton.clicked.connect(self.chooseChromeDriverLocation)
 
-        driverLocationLayout = QHBoxLayout()
-        driverLocationLayout.addWidget(driverLocationLabel)
-        driverLocationLayout.addWidget(self.driverLocationLineEdit)
-        driverLocationLayout.addWidget(driverLocationButton)
-        prefsLayout.addLayout(driverLocationLayout)
+            driverLocationLayout = QHBoxLayout()
+            driverLocationLayout.addWidget(driverLocationLabel)
+            driverLocationLayout.addWidget(self.driverLocationLineEdit)
+            driverLocationLayout.addWidget(driverLocationButton)
+            prefsLayout.addLayout(driverLocationLayout)
 
-        msedgeLocationLabel = QLabel("Edge Driver Location:")
-        self.msedgeLocationLineEdit = QLineEdit()
-        self.msedgeLocationLineEdit.setText(self.loadSetting("msedgeLocation", ""))
-        msedgeLocationButton = QPushButton("Choose")
-        msedgeLocationButton.clicked.connect(self.chooseMsEdgeDriverLocation)
+            msedgeLocationLabel = QLabel("Edge Driver Location:")
+            self.msedgeLocationLineEdit = QLineEdit()
+            self.msedgeLocationLineEdit.setText(self.loadSetting("msedgeLocation", ""))
+            msedgeLocationButton = QPushButton("Choose")
+            msedgeLocationButton.clicked.connect(self.chooseMsEdgeDriverLocation)
 
-        msedgeLocationLayout = QHBoxLayout()
-        msedgeLocationLayout.addWidget(msedgeLocationLabel)
-        msedgeLocationLayout.addWidget(self.msedgeLocationLineEdit)
-        msedgeLocationLayout.addWidget(msedgeLocationButton)
-        prefsLayout.addLayout(msedgeLocationLayout)
+            msedgeLocationLayout = QHBoxLayout()
+            msedgeLocationLayout.addWidget(msedgeLocationLabel)
+            msedgeLocationLayout.addWidget(self.msedgeLocationLineEdit)
+            msedgeLocationLayout.addWidget(msedgeLocationButton)
+            prefsLayout.addLayout(msedgeLocationLayout)
 
-        saveButton = QPushButton("Save")
-        saveButton.clicked.connect(self.savePrefs)
-        prefsLayout.addWidget(saveButton)
+            saveButton = QPushButton("Save")
+            saveButton.clicked.connect(self.savePrefs)
+            prefsLayout.addWidget(saveButton)
 
-        self.prefsWindow.setLayout(prefsLayout)
-        self.prefsWindow.resize(600, 300)
-        self.prefsWindow.show()
+            self.prefsWindow.setLayout(prefsLayout)
+            self.prefsWindow.resize(600, 300)
+            self.prefsWindow.show()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while opening preferences: {e}")
 
     def chooseChromeDriverLocation(self):
-        fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "Executable Files (*.exe)")
-        if fileName:
-            self.driverLocationLineEdit.setText(fileName)
+        try:
+            fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "Executable Files (*.exe)")
+            if fileName:
+                self.driverLocationLineEdit.setText(fileName)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while choosing Chrome driver location: {e}")
 
     def chooseMsEdgeDriverLocation(self):
-        fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "Executable Files (*.exe)")
-        if fileName:
-            self.msedgeLocationLineEdit.setText(fileName)
+        try:
+            fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "Executable Files (*.exe)")
+            if fileName:
+                self.msedgeLocationLineEdit.setText(fileName)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while choosing Edge driver location: {e}")
 
     def chooseSavePathLocation(self):
-        directory = QFileDialog.getExistingDirectory(self, "Select Directory")
-        if directory:
-            self.savePathLineEdit.setText(directory)
+        try:
+            directory = QFileDialog.getExistingDirectory(self, "Select Directory")
+            if directory:
+                self.savePathLineEdit.setText(directory)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while choosing save path location: {e}")
 
     def savePrefs(self):
-        self.saveSetting("defaultBrowser", self.browserComboBox.currentText())
-        self.saveSetting("savePath", self.savePathLineEdit.text())
-        self.saveSetting("driverLocation", self.driverLocationLineEdit.text())
-        self.saveSetting("msedgeLocation", self.msedgeLocationLineEdit.text())
+        try:
+            self.saveSetting("defaultBrowser", self.browserComboBox.currentText())
+            self.saveSetting("savePath", self.savePathLineEdit.text())
+            self.saveSetting("driverLocation", self.driverLocationLineEdit.text())
+            self.saveSetting("msedgeLocation", self.msedgeLocationLineEdit.text())
 
-        self.browserLabel.setText("Browser: " + self.loadSetting("defaultBrowser", "Chrome"))
+            self.browserLabel.setText("Browser: " + self.loadSetting("defaultBrowser", "Chrome"))
 
-        self.prefsWindow.close()
+            self.prefsWindow.close()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while saving preferences: {e}")
 
     def settingsFilePath(self):
         return os.path.join(os.getenv('APPDATA'), 'Atom8', 'settings.json')
@@ -1231,11 +1345,14 @@ class Atom8(QMainWindow):
         return os.path.join(os.getenv('APPDATA'), 'Atom8', 'recent_files.json')
 
     def saveSetting(self, key, value):
-        settings = self.loadSettings()
-        settings[key] = value
-        os.makedirs(os.path.dirname(self.settingsFilePath()), exist_ok=True)
-        with open(self.settingsFilePath(), 'w') as file:
-            json.dump(settings, file)
+        try:
+            settings = self.loadSettings()
+            settings[key] = value
+            os.makedirs(os.path.dirname(self.settingsFilePath()), exist_ok=True)
+            with open(self.settingsFilePath(), 'w') as file:
+                json.dump(settings, file)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while saving setting: {e}")
 
     def loadSetting(self, key, defaultValue=None):
         settings = self.loadSettings()
@@ -1252,17 +1369,23 @@ class Atom8(QMainWindow):
             return {}
 
     def loadRecentFiles(self):
-        if os.path.exists(self.recentFilesFilePath()):
-            with open(self.recentFilesFilePath(), 'r') as file:
-                self.recentFiles = json.load(file)
-                self.updateRecentFilesMenu()
-        else:
-            self.recentFiles = []
+        try:
+            if os.path.exists(self.recentFilesFilePath()):
+                with open(self.recentFilesFilePath(), 'r') as file:
+                    self.recentFiles = json.load(file)
+                    self.updateRecentFilesMenu()
+            else:
+                self.recentFiles = []
+        except (FileNotFoundError, json.JSONDecodeError):
+            self.logger.warning("Failed to load recent files file.")
 
     def saveRecentFiles(self):
-        os.makedirs(os.path.dirname(self.recentFilesFilePath()), exist_ok=True)
-        with open(self.recentFilesFilePath(), 'w') as file:
-            json.dump(self.recentFiles, file)
+        try:
+            os.makedirs(os.path.dirname(self.recentFilesFilePath()), exist_ok=True)
+            with open(self.recentFilesFilePath(), 'w') as file:
+                json.dump(self.recentFiles, file)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while saving recent files: {e}")
 
     def setupScriptEditor(self):
         self.scriptEditorWindow = QMainWindow(self)
@@ -1346,24 +1469,30 @@ class Atom8(QMainWindow):
         self.scriptEditorWindow.show()
 
     def newFile(self):
-        if self.steps:
-            msgBox = QMessageBox()
-            msgBox.setIcon(QMessageBox.Question)
-            msgBox.setText("Do you want to save the current file?")
-            msgBox.setWindowTitle("Save File")
-            msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
-            msgBox.setDefaultButton(QMessageBox.Yes)
-            response = msgBox.exec()
+        try:
+            if self.steps:
+                msgBox = QMessageBox()
+                msgBox.setIcon(QMessageBox.Question)
+                msgBox.setText("Do you want to save the current file?")
+                msgBox.setWindowTitle("Save File")
+                msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
+                msgBox.setDefaultButton(QMessageBox.Yes)
+                response = msgBox.exec()
 
-            if response == QMessageBox.Yes:
-                self.realSaveFile()
+                if response == QMessageBox.Yes:
+                    self.realSaveFile()
+                    self.clearStepsList()
+                    self.clearInputFields()
+                elif response == QMessageBox.No:
+                    self.clearStepsList()
+                    self.clearInputFields()
+                elif response == QMessageBox.Cancel:
+                    return
+            else:
                 self.clearStepsList()
                 self.clearInputFields()
-            elif response == QMessageBox.No:
-                self.clearStepsList()
-                self.clearInputFields()
-            elif response == QMessageBox.Cancel:
-                return
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while creating new file: {e}")
 
     def generateBugForJira(self):
         try:
@@ -1397,11 +1526,16 @@ class Atom8(QMainWindow):
             bugReport += "\n---\n"
 
             bugReport += "**Performed with the following options:**\n"
-            for checkbox in self.findChildren(QCheckBox):
-                if checkbox.isChecked():
-                    if "Generate Report" in checkbox.text():
-                        continue
-                    bugReport += f"- [x] {checkbox.text()}\n"
+
+            if any(checkbox.isChecked() for checkbox in
+                   self.findChildren(QCheckBox)) and not self.generateReport.isChecked():
+                for checkbox in self.findChildren(QCheckBox):
+                    if checkbox.isChecked():
+                        if "Generate Report" in checkbox.text():
+                            continue
+                        bugReport += f"- [x] {checkbox.text()}\n"
+            else:
+                bugReport += "- [x] None\n"
 
             bugReport += "\n---\n"
 
@@ -1430,187 +1564,207 @@ class Atom8(QMainWindow):
                 else:
                     expected = 'Unknown Action'
 
-                print(f"Results: {self.results}")
-
                 if self.results[index][1] == 'Passed':
                     bugReport += f"| {stepNumber} | {action} | {value} | {expected} | | Passed |\n"
                 else:
                     bugReport += f"| {stepNumber} | {action} | {value} | {expected} | | Failed |\n"
 
-                # bugReport += f"| {stepNumber} | {action} | {value} | {expected} | | |\n"
             bugReport += "\n"
-
             bugReport += "\n**Attachments:**\n <Add screenshots here>\n"
-
             bugReport += "\n---\n"
-
             return bugReport
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to generate bug report: {e}")
 
     def updateRecentFiles(self, fileName):
-        if fileName in self.recentFiles:
-            self.recentFiles.remove(fileName)
-        self.recentFiles.insert(0, fileName)
-        if len(self.recentFiles) > 10:
-            self.recentFiles.pop()
-        self.saveRecentFiles()
-        self.updateRecentFilesMenu()
-
-    def stepPassedOrFailed(self, step, status):
-        if self.generateReport.isChecked():
-            self.results.append((step, status))
+        try:
+            if fileName in self.recentFiles:
+                self.recentFiles.remove(fileName)
+            self.recentFiles.insert(0, fileName)
+            if len(self.recentFiles) > 10:
+                self.recentFiles.pop()
+            self.saveRecentFiles()
+            self.updateRecentFilesMenu()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while updating recent files: {e}")
 
     def saveLogs(self):
-        options = QFileDialog.Options()
-        fileName, _ = QFileDialog.getSaveFileName(self, "Save Logs", "", "Log Files (*.log)", options=options)
-        if fileName:
-            with open(fileName, "w") as file:
-                file.write(self.logViewer.toPlainText())
+        try:
+            options = QFileDialog.Options()
+            fileName, _ = QFileDialog.getSaveFileName(self, "Save Logs", "", "Log Files (*.log)", options=options)
+            if fileName:
+                with open(fileName, "w") as file:
+                    file.write(self.logViewer.toPlainText())
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while saving logs: {e}")
 
     def clearLogs(self):
         self.logViewer.clear()
 
     def editSelectedStep(self):
-        selected_item = self.stepsList.currentRow()
-        if selected_item >= 0:
-            self.editMode = True
-            self.editIndex = selected_item
-            self.editButton.setVisible(False)
-            self.saveButton.setVisible(True)
+        try:
+            selected_item = self.stepsList.currentRow()
+            if selected_item >= 0:
+                self.editMode = True
+                self.editIndex = selected_item
+                self.editButton.setVisible(False)
+                self.saveButton.setVisible(True)
 
-            step = self.steps[selected_item]
-            action = step[0]
-            self.actionSelection.setCurrentText(action)
-            if action in ['Click Element', 'Input Text']:
-                self.locatorSelection.setVisible(True)
-                self.locatorInput.setVisible(True)
-                self.locatorSelection.setCurrentText(step[1])
-                self.locatorInput.setText(step[2])
+                step = self.steps[selected_item]
+                action = step[0]
+                self.actionSelection.setCurrentText(action)
+                if action in ['Click Element', 'Input Text']:
+                    self.locatorSelection.setVisible(True)
+                    self.locatorInput.setVisible(True)
+                    self.locatorSelection.setCurrentText(step[1])
+                    self.locatorInput.setText(step[2])
+                else:
+                    self.locatorSelection.setVisible(False)
+                    self.locatorInput.setVisible(False)
+
+                self.inputText.setVisible(
+                    action in ['Input Text', 'Execute Python Script', 'Execute JavaScript', 'Navigate to URL',
+                               'Take Screenshot'])
+                self.sleepInput.setVisible(action == 'Sleep')
+                self.inputDescription.setVisible(
+                    action in ['Click Element', 'Input Text', 'Sleep', 'Navigate to URL', 'Execute Python Script',
+                               'Execute JavaScript'])
+
+                if action == 'Navigate to URL':
+                    self.inputText.setPlaceholderText("Enter URL")
+                    self.inputText.setText(step[1])
+                elif action == 'Input Text':
+                    self.inputText.setPlaceholderText("Enter Text")
+                    self.inputText.setText(step[3])
+                elif action == 'Execute Python Script':
+                    self.inputText.setPlaceholderText("Enter Script Path")
+                    self.inputText.setText(step[1])
+                elif action == 'Execute JavaScript':
+                    self.inputText.setPlaceholderText("Enter JavaScript Code")
+                    self.inputText.setText(step[1])
+                elif action == 'Sleep':
+                    self.inputText.setPlaceholderText("Enter Sleep Time (in seconds)")
+                    self.inputText.setText(step[1])
+                elif action == 'Take Screenshot':
+                    self.inputText.setPlaceholderText("Enter Screenshot Name")
+                    self.inputText.setText(step[1])
+                else:
+                    self.inputText.setPlaceholderText("Enter Text")
+                    self.inputText.setText(step[1])
+
+                self.inputDescription.setText(step[-1])
             else:
-                self.locatorSelection.setVisible(False)
-                self.locatorInput.setVisible(False)
-
-            self.inputText.setVisible(
-                action in ['Input Text', 'Execute Python Script', 'Execute JavaScript', 'Navigate to URL',
-                           'Take Screenshot'])
-            self.sleepInput.setVisible(action == 'Sleep')
-            self.inputDescription.setVisible(
-                action in ['Click Element', 'Input Text', 'Sleep', 'Navigate to URL', 'Execute Python Script',
-                           'Execute JavaScript'])
-
-            if action == 'Navigate to URL':
-                self.inputText.setPlaceholderText("Enter URL")
-                self.inputText.setText(step[1])
-            elif action == 'Input Text':
-                self.inputText.setPlaceholderText("Enter Text")
-                self.inputText.setText(step[3])
-            elif action == 'Execute Python Script':
-                self.inputText.setPlaceholderText("Enter Script Path")
-                self.inputText.setText(step[1])
-            elif action == 'Execute JavaScript':
-                self.inputText.setPlaceholderText("Enter JavaScript Code")
-                self.inputText.setText(step[1])
-            elif action == 'Sleep':
-                self.inputText.setPlaceholderText("Enter Sleep Time (in seconds)")
-                self.inputText.setText(step[1])
-            elif action == 'Take Screenshot':
-                self.inputText.setPlaceholderText("Enter Screenshot Name")
-                self.inputText.setText(step[1])
-            else:
-                self.inputText.setPlaceholderText("Enter Text")
-                self.inputText.setText(step[1])
-
-            self.inputDescription.setText(step[-1])
-        else:
-            QMessageBox.warning(self, "No Selection", "Please select a step to edit.")
+                QMessageBox.warning(self, "No Selection", "Please select a step to edit.")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while editing step: {e}")
 
     def updateStep(self):
-        selected_item = self.stepsList.currentRow()
-        if selected_item >= 0:
-            action = self.actionSelection.currentText()
-            locator_type = self.locatorSelection.currentText()
-            locator_value = self.locatorInput.text()
-            text_value = self.inputText.text()
-            sleep_value = self.sleepInput.text()
-            description_value = self.inputDescription.text()
+        try:
+            selected_item = self.stepsList.currentRow()
+            if selected_item >= 0:
+                action = self.actionSelection.currentText()
+                locator_type = self.locatorSelection.currentText()
+                locator_value = self.locatorInput.text()
+                text_value = self.inputText.text()
+                sleep_value = self.sleepInput.text()
+                description_value = self.inputDescription.text()
 
-            if action == 'Sleep':
-                step = (action, sleep_value)
-                display_txt = f'Sleep for {sleep_value} seconds.'
-            elif action in ['Click Element', 'Input Text']:
-                step = (action, locator_type, locator_value, text_value, description_value)
-                display_txt = f'{action}: {locator_value if locator_value else text_value} (Locator: {locator_type if locator_type != "Select Locator" else "N/A"}), Description: {description_value}'
-            elif action in ['Navigate to URL', 'Execute JavaScript', 'Execute Python Script']:
-                step = (action, text_value, description_value)
-                display_txt = f'{action}: {text_value}{"." if not description_value else f", Description: {description_value}"}'
-            elif action == 'Take Screenshot':
-                step = (action, text_value, description_value)
-                display_txt = f'Take screenshot and save as {text_value}{".png" if not text_value.endswith(".png") else ""}{"." if not description_value else f", Description: {description_value}"}'
-            elif action == 'Maximize Window':
-                step = action
-                display_txt = f'Maximize Window.'
+                if action == 'Sleep':
+                    step = (action, sleep_value)
+                    display_txt = f'Sleep for {sleep_value} seconds.'
+                elif action in ['Click Element', 'Input Text']:
+                    step = (action, locator_type, locator_value, text_value, description_value)
+                    display_txt = f'{action}: {locator_value if locator_value else text_value} (Locator: {locator_type if locator_type != "Select Locator" else "N/A"}), Description: {description_value}'
+                elif action in ['Navigate to URL', 'Execute JavaScript', 'Execute Python Script']:
+                    step = (action, text_value, description_value)
+                    display_txt = f'{action}: {text_value}{"." if not description_value else f", Description: {description_value}"}'
+                elif action == 'Take Screenshot':
+                    step = (action, text_value, description_value)
+                    display_txt = f'Take screenshot and save as {text_value}{".png" if not text_value.endswith(".png") else ""}{"." if not description_value else f", Description: {description_value}"}'
+                elif action == 'Maximize Window':
+                    step = action
+                    display_txt = f'Maximize Window.'
+                else:
+                    QMessageBox.warning(self, "Invalid Action", "The selected action is not supported.")
+                    return
+
+                self.steps[selected_item] = step
+                self.stepsList.item(selected_item).setText(display_txt)
             else:
-                QMessageBox.warning(self, "Invalid Action", "The selected action is not supported.")
-                return
-
-            self.steps[selected_item] = step
-            self.stepsList.item(selected_item).setText(display_txt)
-        else:
-            QMessageBox.warning(self, "No Selection", "Please select a step to update.")
+                QMessageBox.warning(self, "No Selection", "Please select a step to update.")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while updating step: {e}")
 
     def moveStepUp(self):
-        selected_item = self.stepsList.currentRow()
-        if selected_item >= 1:
-            self.stepsList.insertItem(selected_item - 1, self.stepsList.takeItem(selected_item))
-            self.steps.insert(selected_item - 1, self.steps.pop(selected_item))
-            self.stepsList.setCurrentRow(selected_item - 1)
-        else:
-            QMessageBox.warning(self, "No Selection", "Please select a step to move up.")
+        try:
+            selected_item = self.stepsList.currentRow()
+            if selected_item >= 1:
+                self.stepsList.insertItem(selected_item - 1, self.stepsList.takeItem(selected_item))
+                self.steps.insert(selected_item - 1, self.steps.pop(selected_item))
+                self.stepsList.setCurrentRow(selected_item - 1)
+            else:
+                QMessageBox.warning(self, "No Selection", "Please select a step to move up.")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while moving step up: {e}")
 
     def moveStepDown(self):
-        selected_item = self.stepsList.currentRow()
-        if selected_item >= 0 and selected_item < self.stepsList.count() - 1:
-            self.stepsList.insertItem(selected_item + 1, self.stepsList.takeItem(selected_item))
-            self.steps.insert(selected_item + 1, self.steps.pop(selected_item))
-            self.stepsList.setCurrentRow(selected_item + 1)
-        else:
-            QMessageBox.warning(self, "No Selection", "Please select a step to move down.")
+        try:
+            selected_item = self.stepsList.currentRow()
+            if selected_item >= 0 and selected_item < self.stepsList.count() - 1:
+                self.stepsList.insertItem(selected_item + 1, self.stepsList.takeItem(selected_item))
+                self.steps.insert(selected_item + 1, self.steps.pop(selected_item))
+                self.stepsList.setCurrentRow(selected_item + 1)
+            else:
+                QMessageBox.warning(self, "No Selection", "Please select a step to move down.")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while moving step down: {e}")
 
     def addOrEditStep(self):
-        if self.editMode:
+        try:
+            if self.editMode:
+                self.updateStep()
+                self.editMode = False
+                self.editIndex = None
+                self.editButton.setVisible(True)
+                self.saveButton.setVisible(False)
+            else:
+                self.addStep()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while adding or editing step: {e}")
+
+    def saveEditedStep(self):
+        try:
             self.updateStep()
             self.editMode = False
             self.editIndex = None
             self.editButton.setVisible(True)
             self.saveButton.setVisible(False)
-        else:
-            self.addStep()
+            self.clearInputFields()
 
-    def saveEditedStep(self):
-        self.updateStep()
-        self.editMode = False
-        self.editIndex = None
-        self.editButton.setVisible(True)
-        self.saveButton.setVisible(False)
-        self.clearInputFields()
-
-        self.logger.info("Saved edited step.")
+            self.logger.info("Saved edited step.")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while saving edited step: {e}")
 
     def clearInputFields(self):
-        self.actionSelection.setCurrentIndex(0)
-        self.locatorSelection.setCurrentIndex(0)
-        self.locatorInput.setText('')
-        self.inputText.setText('')
-        self.sleepInput.setText('')
-        self.inputDescription.setText('')
+        try:
+            self.actionSelection.setCurrentIndex(0)
+            self.locatorSelection.setCurrentIndex(0)
+            self.locatorInput.setText('')
+            self.inputText.setText('')
+            self.sleepInput.setText('')
+            self.inputDescription.setText('')
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while clearing input fields: {e}")
 
     def updateRecentFilesMenu(self):
-        self.recentFilesMenu.clear()
-        for filePath in self.recentFiles:
-            action = QAction(filePath, self)
-            action.triggered.connect(lambda checked, path=filePath: self.openRecentFile(path))
-            self.recentFilesMenu.addAction(action)
+        try:
+            self.recentFilesMenu.clear()
+            for filePath in self.recentFiles:
+                action = QAction(filePath, self)
+                action.triggered.connect(lambda checked, path=filePath: self.openRecentFile(path))
+                self.recentFilesMenu.addAction(action)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while updating recent files menu: {e}")
 
     def openRecentFile(self, filePath):
         try:
@@ -1633,91 +1787,112 @@ class Atom8(QMainWindow):
             QMessageBox.critical(self, "Error", f"Failed to open file: {e}")
 
     def loadRecentFiles(self):
-        if os.path.exists(self.recentFilesFilePath()):
-            with open(self.recentFilesFilePath(), 'r') as file:
-                self.recentFiles = json.load(file)
-                self.updateRecentFilesMenu()
-        else:
-            self.recentFiles = []
+        try:
+            if os.path.exists(self.recentFilesFilePath()):
+                with open(self.recentFilesFilePath(), 'r') as file:
+                    self.recentFiles = json.load(file)
+                    self.updateRecentFilesMenu()
+            else:
+                self.recentFiles = []
+        except (FileNotFoundError, json.JSONDecodeError):
+            self.logger.warning("Failed to load recent files file.")
 
     def extractWebElements(self):
-        url, ok = QInputDialog.getText(self, 'Extract Web Elements', 'Enter the URL:')
-        if ok and url:
-            try:
-                elements_data = extract_elements_to_json(url)
-                self.showExtractionResult(elements_data)
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to extract elements: {e}")
+        try:
+            url, ok = QInputDialog.getText(self, 'Extract Web Elements', 'Enter the URL:')
+            if ok and url:
+                try:
+                    elements_data = extract_elements_to_json(url)
+                    self.showExtractionResult(elements_data)
+                except Exception as e:
+                    QMessageBox.critical(self, "Error", f"Failed to extract elements: {e}")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while extracting web elements: {e}")
 
     def showExtractionResult(self, elements_data):
-        self.resultsWindow = QDialog(self, Qt.Window)
-        self.resultsWindow.setWindowTitle("Extraction Results")
-        resultsLayout = QVBoxLayout()
+        try:
+            self.resultsWindow = QDialog(self, Qt.Window)
+            self.resultsWindow.setWindowTitle("Extraction Results")
+            resultsLayout = QVBoxLayout()
 
-        self.urlInputField = QLineEdit(self.resultsWindow)
-        self.urlInputField.setPlaceholderText('Enter URL')
-        resultsLayout.addWidget(self.urlInputField)
+            self.urlInputField = QLineEdit(self.resultsWindow)
+            self.urlInputField.setPlaceholderText('Enter URL')
+            resultsLayout.addWidget(self.urlInputField)
 
-        searchButton = QPushButton('Extract Web Elements', self.resultsWindow)
-        searchButton.clicked.connect(self.onSearchClicked)
-        resultsLayout.addWidget(searchButton)
+            searchButton = QPushButton('Extract Web Elements', self.resultsWindow)
+            searchButton.clicked.connect(self.onSearchClicked)
+            resultsLayout.addWidget(searchButton)
 
-        self.resultsTable = QTableWidget()
-        self.updateResultsTable(elements_data)
-        self.resultsTable.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.resultsTable.customContextMenuRequested.connect(self.resultsTableContextMenu)
-        resultsLayout.addWidget(self.resultsTable)
+            self.resultsTable = QTableWidget()
+            self.updateResultsTable(elements_data)
+            self.resultsTable.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.resultsTable.customContextMenuRequested.connect(self.resultsTableContextMenu)
+            resultsLayout.addWidget(self.resultsTable)
 
-        self.resultsWindow.setLayout(resultsLayout)
-        self.resultsWindow.resize(600, 400)
-        self.resultsWindow.show()
+            self.resultsWindow.setLayout(resultsLayout)
+            self.resultsWindow.resize(600, 400)
+            self.resultsWindow.show()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while showing extraction results: {e}")
 
     def resultsTableContextMenu(self, position):
-        index = self.resultsTable.indexAt(position)
-        if index.isValid() and index.column() == 1:
-            menu = QMenu()
-            copyAction = menu.addAction("Copy")
-            action = menu.exec_(self.resultsTable.viewport().mapToGlobal(position))
-            if action == copyAction:
-                self.copyLocatorValue(index.row())
+        try:
+            index = self.resultsTable.indexAt(position)
+            if index.isValid() and index.column() == 1:
+                menu = QMenu()
+                copyAction = menu.addAction("Copy")
+                action = menu.exec_(self.resultsTable.viewport().mapToGlobal(position))
+                if action == copyAction:
+                    self.copyLocatorValue(index.row())
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while showing results table context menu: {e}")
 
     def copyLocatorValue(self, row):
-        comboBox = self.resultsTable.cellWidget(row, 1)
-        if comboBox:
-            selectedText = comboBox.currentText()
-            clipboard = QApplication.clipboard()
-            clipboard.setText(selectedText)
+        try:
+            comboBox = self.resultsTable.cellWidget(row, 1)
+            if comboBox:
+                selectedText = comboBox.currentText()
+                clipboard = QApplication.clipboard()
+                clipboard.setText(selectedText)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while copying locator value: {e}")
 
     def updateResultsTable(self, elements_data):
-        self.resultsTable.setColumnCount(2)
-        self.resultsTable.setHorizontalHeaderLabels(['Value', 'Locators'])
-        self.resultsTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.resultsTable.verticalHeader().setVisible(False)
-        self.resultsTable.setEditTriggers(QTableWidget.NoEditTriggers)
+        try:
+            self.resultsTable.setColumnCount(2)
+            self.resultsTable.setHorizontalHeaderLabels(['Value', 'Locators'])
+            self.resultsTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.resultsTable.verticalHeader().setVisible(False)
+            self.resultsTable.setEditTriggers(QTableWidget.NoEditTriggers)
 
-        self.resultsTable.setRowCount(len(elements_data))
-        for row, element in enumerate(elements_data):
-            self.resultsTable.setRowHeight(row, 45)
-            self.resultsTable.setItem(row, 0, QTableWidgetItem(element['value']))
-            comboBox = CustomComboBox()
-            for locator in element['locators']:
-                comboBox.addItem(f"XPath: {locator['xpath']}")
-                for attr, value in locator['attributes'].items():
-                    comboBox.addItem(f"{attr}: {value}")
-            self.resultsTable.setCellWidget(row, 1, comboBox)
+            self.resultsTable.setRowCount(len(elements_data))
+            for row, element in enumerate(elements_data):
+                self.resultsTable.setRowHeight(row, 45)
+                self.resultsTable.setItem(row, 0, QTableWidgetItem(element['value']))
+                comboBox = CustomComboBox()
+                for locator in element['locators']:
+                    comboBox.addItem(f"XPath: {locator['xpath']}")
+                    for attr, value in locator['attributes'].items():
+                        comboBox.addItem(f"{attr}: {value}")
+                self.resultsTable.setCellWidget(row, 1, comboBox)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while updating results table: {e}")
 
     def onSearchClicked(self):
-        url = self.urlInputField.text()
-        if url:
-            QApplication.processEvents()
+        try:
+            url = self.urlInputField.text()
+            if url:
+                QApplication.processEvents()
 
-            try:
-                elements_data = extract_elements_to_json(url)
-                self.updateResultsTable(elements_data)
-                self.statusBar.clearMessage()
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to extract elements: {e}")
-                self.statusBar.clearMessage()
+                try:
+                    elements_data = extract_elements_to_json(url)
+                    self.updateResultsTable(elements_data)
+                    self.statusBar.clearMessage()
+                except Exception as e:
+                    QMessageBox.critical(self, "Error", f"Failed to extract elements: {e}")
+                    self.statusBar.clearMessage()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while searching: {e}")
 
 
 if __name__ == '__main__':

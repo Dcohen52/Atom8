@@ -3,7 +3,9 @@
 [![License](https://img.shields.io/badge/License-MIT-green)](https://mit-license.org/)
 ## Overview
 
-Atom8 is a versatile and powerful web automation tool designed to simplify complex web-based tasks through a user-friendly graphical interface. Leveraging the capabilities of Selenium WebDriver, Atom8 offers a range of functionalities suitable for various automation needs, including web testing, data scraping, and browser automation. Its intuitive design makes it accessible to both beginners and advanced users, allowing for the creation and execution of detailed automation scripts with ease. Atom8 supports major web browsers, offers headless mode operation, and includes advanced features like custom Python script execution, dynamic web element extraction, and comprehensive logging. Whether for professional use in QA testing, automating routine web tasks, or sophisticated web data extraction, Atom8 stands as a versatile tool adaptable to various web automation scenarios. Designed with cross-platform compatibility in mind, Atom8 can be utilized on Windows, Mac, and Linux systems, making it a go-to solution for a wide audience looking to automate and streamline their web-based workflows.
+Atom8 is a versatile and powerful web automation tool designed to simplify complex web-based tasks through a user-friendly graphical interface. Leveraging the capabilities of Selenium WebDriver, Atom8 offers a range of functionalities suitable for various automation needs, including web testing, data scraping, and browser automation. Its intuitive design makes it accessible to both beginners and advanced users, allowing for the creation and execution of detailed automation scripts with ease. 
+
+Atom8 supports major web browsers, offers headless mode operation, and includes advanced features like custom Python script execution, dynamic web element extraction, comprehensive logging, detailed report generation, and a feature to copy full bug reports in a Jira-compatible format. These enhancements make Atom8 ideal for a wide range of applications such as QA testing, routine web task automation, sophisticated web data extraction, and efficient bug tracking and reporting. Designed with cross-platform compatibility in mind, Atom8 can be utilized on Windows, Mac, and Linux systems, making it a go-to solution for a wide audience looking to automate and streamline their web-based workflows.
 
 ## Key Features
 
@@ -16,14 +18,16 @@ Atom8 is a versatile and powerful web automation tool designed to simplify compl
 - **Headless Browser Support:** Offers headless mode execution, enabling automation in environments without a display.
 - **Browser Compatibility:** Compatible with major web browsers like Chrome and Edge, providing flexibility in automation tasks.
 - **Advanced Browser Options:** Customizable browser options including headless mode, GPU acceleration, incognito mode, and more.
-- **WebElement Extraction:** Includes a feature to extract web elements, aiding in script creation and debugging.
 - **Cross-Platform Support:** Atom8 is designed to run on multiple operating systems including Windows, Mac, and Linux.
 - **Documentation and Help:** Includes in-built help documentation and guides for user assistance.
+
 
 ## Why Atom8 is Ideal for QA Professionals
 
 Atom8 is uniquely positioned to meet the needs of Quality Assurance (QA) professionals in several key areas:
 - **Comprehensive Web Testing:** Atom8 offers robust features for thorough web application testing, ensuring a comprehensive coverage of functional and performance aspects. Its ability to automate a wide range of user interactions simplifies the testing process and enhances its thoroughness.
+- **Report Generation:** Offers the capability to generate detailed reports of the automation processes, useful for documentation and analysis.
+- **Copy Full Bug to Jira:** Enables users to easily copy full bug reports in a Jira-compatible format, streamlining the bug reporting process.
 - **Script Flexibility and Extensibility:** With support for custom Python scripting, QA professionals can tailor their test automation scripts to fit specific needs and scenarios, allowing for greater flexibility and precision.
 - **Cross-Browser Compatibility:** Atom8's compatibility with major web browsers ensures that web applications can be tested across different browser environments, an essential aspect of comprehensive QA testing.
 - **Headless Mode Testing:** The headless mode allows running tests in environments without a graphical user interface, ideal for automated testing pipelines and continuous integration systems.

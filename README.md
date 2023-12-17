@@ -75,6 +75,11 @@ Atom8 is designed to cater to the needs of businesses, IT professionals, researc
 
 ![image](https://github.com/Dcohen52/Atom8/assets/26333525/45dd2487-23b8-4212-9a94-f3915ed4e1bf)
 
+![image](https://github.com/Dcohen52/Atom8/assets/26333525/6dd2b265-1b88-41aa-865b-5932769bfaa2)
+
+![image](https://github.com/Dcohen52/Atom8/assets/26333525/b301c439-a8b6-47d6-ae72-188b8068de42)
+
+
 ## License
 
 Atom8 is made available under the MIT License. Please refer to the LICENSE file for detailed terms and conditions.

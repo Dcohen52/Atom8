@@ -5,10 +5,11 @@ import logging
 import time
 from datetime import datetime
 from PyQt5.QtCore import Qt, QSize, QRect
-from PyQt5.QtGui import QColor, QTextFormat, QPainter
+from PyQt5.QtGui import QColor, QTextFormat, QPainter, QPixmap
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLineEdit, QLabel, QComboBox, \
     QListWidget, QHBoxLayout, QAction, QMessageBox, QFileDialog, QStatusBar, QCheckBox, QTextEdit, QInputDialog, \
-    QDialog, QTableWidgetItem, QTableWidget, QMenu, QHeaderView, QPlainTextEdit, QTabWidget, QGroupBox, QScrollArea
+    QDialog, QTableWidgetItem, QTableWidget, QMenu, QHeaderView, QPlainTextEdit, QTabWidget, QGroupBox, QScrollArea, \
+    QSplashScreen
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -152,6 +153,12 @@ class ScriptEditor(QPlainTextEdit):
 class Atom8(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.splash = QSplashScreen(QPixmap("assets/splash.png"))  # Path to your splash screen image
+        self.splash.showMessage("Loading Atom8...", Qt.AlignHCenter | Qt.AlignBottom, Qt.white)
+        self.splash.show()
+        time.sleep(3)  # Show splash screen for 3 seconds
+        self.splash.finish(self)
+
         self.driver = None
         self.steps = []
         self.recentFiles = []
@@ -1127,7 +1134,7 @@ class Atom8(QMainWindow):
             </style>
         </head>
         <body>
-            <h2>Atom8 - Advanced Web Automation Tool</h2>
+            <h2>Atom8</h2>
             <p><strong>Version:</strong> 1.0-dev</p>
             <p>Atom8 is a robust and user-friendly web automation tool, offering enhanced capabilities for both professionals and enthusiasts. This tool streamlines complex web tasks, providing an advanced yet seamless automation experience. It's perfect for a variety of applications, including data scraping, automated testing, and more.</p>
             <p>Built upon the popular Selenium framework, Atom8 stands out as a more accessible alternative, boasting a straightforward interface for creating and executing both simple and complex automation scripts.</p>

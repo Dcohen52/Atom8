@@ -1,5 +1,5 @@
 # Atom8
-[![Version](https://img.shields.io/badge/1.0-dev-blue)](https://github.com/Dcohen52/Atom8/tree/main)
+[![Version](https://img.shields.io/badge/0.0.1-dev-blue)](https://github.com/Dcohen52/Atom8/tree/main)
 [![License](https://img.shields.io/badge/License-MIT-green)](https://mit-license.org/)
 ## Overview
 

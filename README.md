@@ -7,6 +7,12 @@ Atom8 is a versatile and powerful web automation tool designed to simplify compl
 
 Atom8 supports major web browsers, offers headless mode operation, and includes advanced features like custom Python script execution, dynamic web element extraction, comprehensive logging, detailed report generation, and a feature to copy full bug reports in a Jira-compatible format. These enhancements make Atom8 ideal for a wide range of applications such as QA testing, routine web task automation, sophisticated web data extraction, and efficient bug tracking and reporting. Designed with cross-platform compatibility in mind, Atom8 can be utilized on Windows, Mac, and Linux systems, making it a go-to solution for a wide audience looking to automate and streamline their web-based workflows.
 
+## Getting Started
+
+To use Atom8, simply **download the .zip file from the latest release** and extract it to a location of your choice. Then, run the Atom8 executable file to launch the application. The user interface will guide you through the process of creating and executing automation scripts, allowing you to automate a wide range of web-based tasks with ease.
+
+If there are any issues with usage, please run the command 'pip install -r requirements.txt' in the terminal to install the required dependencies.
+
 ## Key Features
 
 - **User-Friendly Interface:** Atom8 is equipped with an intuitive graphical user interface, making it accessible for both beginners and professionals.

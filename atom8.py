@@ -21,6 +21,10 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from helper import extract_elements_to_json
 import platform
 
+"""
+pip install -r requirements.txt
+"""
+
 
 class CustomComboBox(QComboBox):
     def __init__(self, parent=None):
@@ -1038,26 +1042,47 @@ class Atom8(QMainWindow):
                     action = step[0]
                     try:
                         if action == 'Navigate to URL':
-                            self.driver.get(step[1])
+                            try:
+                                self.driver.get(step[1])
+                            except Exception as e:
+                                self.logger.error(f"Error while navigating to URL: {e}")
                         elif action in ['Click Element', 'Input Text']:
-                            locator_type = step[1]
-                            locator_value = step[2]
-                            element = self.driver.find_element(locator_strategies[locator_type], locator_value)
-                            if action == 'Click Element':
-                                element.click()
-                            else:
-                                element.send_keys(step[3])
+                            try:
+                                locator_type = step[1]
+                                locator_value = step[2]
+                                element = self.driver.find_element(locator_strategies[locator_type], locator_value)
+                                if action == 'Click Element':
+                                    element.click()
+                                else:
+                                    element.send_keys(step[3])
+                            except Exception as e:
+                                self.logger.error(f"Error while performing {action}: {e}")
                         elif action == 'Take Screenshot':
-                            self.driver.save_screenshot(step[1])
+                            try:
+                                self.driver.save_screenshot(step[1])
+                            except Exception as e:
+                                self.logger.error(f"Error while taking screenshot: {e}")
                         elif action == 'Execute JavaScript':
-                            self.driver.execute_script(step[1])
+                            try:
+                                self.driver.execute_script(step[1])
+                            except Exception as e:
+                                self.logger.error(f"Error in JavaScript: {e}")
                         elif action == 'Sleep':
-                            time.sleep(float(step[1]))
+                            try:
+                                time.sleep(float(step[1]))
+                            except Exception as e:
+                                self.logger.error(f"Error while sleeping: {e}")
                         elif action == 'Maximize Window':
-                            self.driver.maximize_window()
+                            try:
+                                self.driver.maximize_window()
+                            except Exception as e:
+                                self.logger.error(f"Error while maximizing window: {e}")
                         elif action == 'Execute Python Script':
-                            exec(open(step[1]).read())
-                            #
+                            try:
+                                exec(open(step[1]).read())
+                            except Exception as e:
+                                self.logger.error(f"Error in Python script: {e}")
+
                         self.results.append((step, 'Passed'))
 
                     except Exception as e:
@@ -1142,7 +1167,7 @@ class Atom8(QMainWindow):
         </head>
         <body>
             <h2>Atom8</h2>
-            <p><strong>Version:</strong> 1.0-dev</p>
+            <p><strong>Version:</strong> 1.0-dev b27022024-1</p>
             <p>Atom8 is a robust and user-friendly web automation tool, offering enhanced capabilities for both professionals and enthusiasts. This tool streamlines complex web tasks, providing an advanced yet seamless automation experience. It's perfect for a variety of applications, including data scraping, automated testing, and more.</p>
             <p>Built upon the popular Selenium framework, Atom8 stands out as a more accessible alternative, boasting a straightforward interface for creating and executing both simple and complex automation scripts.</p>
             <p>Explore more about Atom8, get the latest updates, and access support on our GitHub page: <a href="https://github.com/Dcohen52/Atom8" target="_blank">Atom8 GitHub Repository</a>.</p>
@@ -1952,14 +1977,6 @@ class Atom8(QMainWindow):
                     self.statusBar.clearMessage()
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Error while searching: {e}")
-
-    def runPythonScript(self):
-        try:
-            script = self.pythonScriptInput.toPlainText()
-            if script:
-                exec(script)
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Error while running Python script: {e}")
 
 
 if __name__ == '__main__':

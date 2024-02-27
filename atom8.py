@@ -5,7 +5,7 @@ import logging
 import time
 from datetime import datetime
 from PyQt5.QtCore import Qt, QSize, QRect
-from PyQt5.QtGui import QColor, QTextFormat, QPainter, QPixmap
+from PyQt5.QtGui import QColor, QTextFormat, QPainter, QPixmap, QIcon
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLineEdit, QLabel, QComboBox, \
     QListWidget, QHBoxLayout, QAction, QMessageBox, QFileDialog, QStatusBar, QCheckBox, QTextEdit, QInputDialog, \
     QDialog, QTableWidgetItem, QTableWidget, QMenu, QHeaderView, QPlainTextEdit, QTabWidget, QGroupBox, QScrollArea, \
@@ -153,11 +153,14 @@ class ScriptEditor(QPlainTextEdit):
 class Atom8(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.splash = QSplashScreen(QPixmap("assets/splash.png"))  # Path to your splash screen image
+        self.splash = QSplashScreen(QPixmap("_internal/assets/splash.png"))  # Path to your splash screen image
         self.splash.showMessage("Loading Atom8...", Qt.AlignHCenter | Qt.AlignBottom, Qt.white)
         self.splash.show()
         time.sleep(3)  # Show splash screen for 3 seconds
         self.splash.finish(self)
+
+        # set qicon
+        self.setWindowIcon(QIcon("_internal/assets/atom-8-icon.png"))
 
         self.driver = None
         self.steps = []
@@ -233,7 +236,7 @@ class Atom8(QMainWindow):
         }
 
         QComboBox::down-arrow {
-            image: url(assets/drop-down-arrow.png);
+            image: url(_internal/assets/drop-down-arrow.png);
             padding-right: 20px;
             width: 10px;
             height: 10px;
@@ -340,7 +343,7 @@ class Atom8(QMainWindow):
         QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
             background: none;
         }
-        
+
         QPushButton.secondary-btn {
             color: #333;
             background-color: #FFFFFF;
@@ -349,13 +352,15 @@ class Atom8(QMainWindow):
             border: 1px solid #ddd;
             font-size: 12px;
         }
-        
+
         QPushButton.secondary-btn:hover {
             background-color: #EEEEEE;
             border-color: #ddd;
             cursor: pointer;
         }
         """
+
+        # set taskbar icon
 
         self.setWindowTitle('Atom8')
         self.setGeometry(100, 100, 800, 800)
@@ -544,7 +549,7 @@ class Atom8(QMainWindow):
             locator_value = self.locatorInput.text()
             text_value = self.inputText.text()
             description_value = self.inputDescription.text()
-            sleep_value = self.inputText.text()
+            sleep_value = self.sleepInput.text()
 
             if action == 'Sleep':
                 step = (action, sleep_value)
@@ -700,12 +705,12 @@ class Atom8(QMainWindow):
                     border: none;
                     font-size: 12px;
                 }
-    
+
                 QPushButton:hover {
                     background-color: #218838;
                     border-color: #1E7E34;
                 }
-    
+
                 QPushButton:pressed {
                     background-color: #1D7D33;
                     border-color: #1C7430;
@@ -1008,7 +1013,7 @@ class Atom8(QMainWindow):
                         raise ValueError("Invalid Edge driver location")
                     self.logger.info("Starting Edge browser with WebDriver at: " + msedge_driver_location)
                     self.driver = webdriver.Edge(edge_options)
-
+                # Add support for other browsers here
                 else:
                     raise ValueError("Unsupported browser type")
 
@@ -1050,7 +1055,9 @@ class Atom8(QMainWindow):
                             time.sleep(float(step[1]))
                         elif action == 'Maximize Window':
                             self.driver.maximize_window()
-
+                        elif action == 'Execute Python Script':
+                            exec(open(step[1]).read())
+                            #
                         self.results.append((step, 'Passed'))
 
                     except Exception as e:
@@ -1695,8 +1702,8 @@ class Atom8(QMainWindow):
                     self.inputText.setPlaceholderText("Enter JavaScript Code")
                     self.inputText.setText(step[1])
                 elif action == 'Sleep':
-                    self.inputText.setPlaceholderText("Enter Sleep Time (in seconds)")
-                    self.inputText.setText(step[1])
+                    self.sleepInput.setPlaceholderText("Enter Sleep Time")
+                    self.sleepInput.setText(step[1])
                 elif action == 'Take Screenshot':
                     self.inputText.setPlaceholderText("Enter Screenshot Name")
                     self.inputText.setText(step[1])
@@ -1945,6 +1952,14 @@ class Atom8(QMainWindow):
                     self.statusBar.clearMessage()
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Error while searching: {e}")
+
+    def runPythonScript(self):
+        try:
+            script = self.pythonScriptInput.toPlainText()
+            if script:
+                exec(script)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while running Python script: {e}")
 
 
 if __name__ == '__main__':

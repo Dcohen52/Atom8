@@ -1055,31 +1055,37 @@ class Atom8(QMainWindow):
                                     element.click()
                                 else:
                                     element.send_keys(step[3])
+                                self.logger.info(f"{action} at {locator_type}: {locator_value}")
                             except Exception as e:
                                 self.logger.error(f"Error while performing {action}: {e}")
                         elif action == 'Take Screenshot':
                             try:
                                 self.driver.save_screenshot(step[1])
+                                self.logger.info(f"Screenshot saved as {step[1]}")
                             except Exception as e:
                                 self.logger.error(f"Error while taking screenshot: {e}")
                         elif action == 'Execute JavaScript':
                             try:
                                 self.driver.execute_script(step[1])
+                                self.logger.info(f"Executed JavaScript: {step[1]}")
                             except Exception as e:
                                 self.logger.error(f"Error in JavaScript: {e}")
                         elif action == 'Sleep':
                             try:
                                 time.sleep(float(step[1]))
+                                self.logger.info(f"Slept for {step[1]} seconds.")
                             except Exception as e:
                                 self.logger.error(f"Error while sleeping: {e}")
                         elif action == 'Maximize Window':
                             try:
                                 self.driver.maximize_window()
+                                self.logger.info("Maximized window.")
                             except Exception as e:
                                 self.logger.error(f"Error while maximizing window: {e}")
                         elif action == 'Execute Python Script':
                             try:
                                 exec(open(step[1]).read())
+                                self.logger.info(f"Executed Python script: {step[1]}")
                             except Exception as e:
                                 self.logger.error(f"Error in Python script: {e}")
 

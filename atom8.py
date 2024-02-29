@@ -347,6 +347,33 @@ class Atom8(QMainWindow):
         QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
             background: none;
         }
+        
+        QScrollBar:horizontal {
+            border: none;
+            background: #EEEEEE;
+            height: 10px;
+            margin: 0 10px 0 10px;
+        }
+        
+        QScrollBar::handle:horizontal {
+            background: #d1d1d1;
+            min-width: 20px;
+            border-radius: 4px;
+        }
+        
+        QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+            border: none;
+            background: none;
+        }
+        
+        QScrollBar::left-arrow:horizontal, QScrollBar::right-arrow:horizontal {
+            border: none;
+            background: none;
+        }
+        
+        QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+            background: none;
+        }
 
         QPushButton.secondary-btn {
             color: #333;
@@ -490,6 +517,9 @@ class Atom8(QMainWindow):
             fileMenu.addAction(openAction)
 
             self.recentFilesMenu = fileMenu.addMenu('Open Recent')
+            # set the style of the recent files menu
+            self.recentFilesMenu.setStyleSheet("QMenu::item { width: 250px; }")
+
             self.updateRecentFilesMenu()
 
             realSaveAction = QAction('Save', self)
@@ -677,6 +707,12 @@ class Atom8(QMainWindow):
             self.startButton = QPushButton('Run', self)
             self.startButton.clicked.connect(self.startAutomation)
 
+            # self.stopButton = QPushButton('Stop', self)
+            # self.stopButton.clicked.connect(self.stopAutomation)
+            # self.stopButton.setEnabled(False)
+            # self.stopButton.setVisible(False)
+            # self.stopButton.setProperty("class", "red-btn")
+
             self.moveUpButton = QPushButton('Up', self)
             self.moveDownButton = QPushButton('Down', self)
             self.moveUpButton.clicked.connect(self.moveStepUp)
@@ -699,6 +735,7 @@ class Atom8(QMainWindow):
             buttonsLayout.addWidget(self.moveUpButton)
             buttonsLayout.addWidget(self.moveDownButton)
             buttonsLayout.addWidget(self.startButton)
+            # buttonsLayout.addWidget(self.stopButton)
 
             self.startButton.setStyleSheet("""
                 QPushButton {
@@ -720,6 +757,26 @@ class Atom8(QMainWindow):
                     border-color: #1C7430;
                 }
             """)
+            # self.stopButton.setStyleSheet("""
+            #     QPushButton {
+            #         color: white;
+            #         background-color: #DC3545;
+            #         border-radius: 4px;
+            #         padding: 6px 12px;
+            #         border: none;
+            #         font-size: 12px;
+            #     }
+            #
+            #     QPushButton:hover {
+            #         background-color: #C82333;
+            #         border-color: #BD2130;
+            #     }
+            #
+            #     QPushButton:pressed {
+            #         background-color: #B21F2D;
+            #         border-color: #B21F2D;
+            #     }
+            # """)
 
             layout.addLayout(buttonsLayout)
             layout.addWidget(self.stepsList)
@@ -936,6 +993,11 @@ class Atom8(QMainWindow):
                 QMessageBox.warning(self, "Error", f"Error while exporting report: {e}")
 
     def startAutomation(self):
+        self.startButton.setEnabled(False)
+        self.startButton.setVisible(False)
+        self.stopButton.setEnabled(True)
+        self.stopButton.setVisible(True)
+        self.logger.info("Starting automation...")
         try:
             chromeOptionsMapping = {
                 "Headless Mode": "--headless",
@@ -1107,6 +1169,18 @@ class Atom8(QMainWindow):
                 QMessageBox.critical(self, "Error", str(e))
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Error while running the script: {e}")
+
+    # def stopAutomation(self):
+    #     self.startButton.setEnabled(True)
+    #     self.startButton.setVisible(True)
+    #     self.stopButton.setEnabled(False)
+    #     self.stopButton.setVisible(False)
+    #     try:
+    #         self.driver.quit()
+    #         self.logger.info("Operation stopped by user.")
+    #         self.logger.info("\n\nOperation stopped by user.\n")
+    #     except Exception as e:
+    #         QMessageBox.warning(self, "Error", f"Error while stopping the script: {e}")
 
     def formatStepText(self, step):
         try:
@@ -1849,8 +1923,8 @@ class Atom8(QMainWindow):
     def updateRecentFilesMenu(self):
         try:
             self.recentFilesMenu.clear()
-            for filePath in self.recentFiles:
-                action = QAction(filePath, self)
+            for index, filePath in enumerate(self.recentFiles):
+                action = QAction(f"{index + 1}. {filePath.split('/')[-1]}", self)
                 action.triggered.connect(lambda checked, path=filePath: self.openRecentFile(path))
                 self.recentFilesMenu.addAction(action)
         except Exception as e:

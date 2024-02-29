@@ -993,10 +993,10 @@ class Atom8(QMainWindow):
                 QMessageBox.warning(self, "Error", f"Error while exporting report: {e}")
 
     def startAutomation(self):
-        self.startButton.setEnabled(False)
-        self.startButton.setVisible(False)
-        self.stopButton.setEnabled(True)
-        self.stopButton.setVisible(True)
+        # self.startButton.setEnabled(False)
+        # self.startButton.setVisible(False)
+        # self.stopButton.setEnabled(True)
+        # self.stopButton.setVisible(True)
         self.logger.info("Starting automation...")
         try:
             chromeOptionsMapping = {
@@ -1247,8 +1247,8 @@ class Atom8(QMainWindow):
         </head>
         <body>
             <h2>Atom8</h2>
-            <p><strong>Version:</strong> 1.0-dev b27022024-1</p>
-            <p>Atom8 is a robust and user-friendly web automation tool, offering enhanced capabilities for both professionals and enthusiasts. This tool streamlines complex web tasks, providing an advanced yet seamless automation experience. It's perfect for a variety of applications, including data scraping, automated testing, and more.</p>
+            <p><strong>Version:</strong> 1.0-dev b29022024-1</p>
+            <p>Atom8 is a robust and user-friendly web automation platform, offering enhanced capabilities for both professionals and enthusiasts. This tool streamlines complex web tasks, providing an advanced yet seamless automation experience. It's perfect for a variety of applications, including data scraping, automated testing, and more.</p>
             <p>Built upon the popular Selenium framework, Atom8 stands out as a more accessible alternative, boasting a straightforward interface for creating and executing both simple and complex automation scripts.</p>
             <p>Explore more about Atom8, get the latest updates, and access support on our GitHub page: <a href="https://github.com/Dcohen52/Atom8" target="_blank">Atom8 GitHub Repository</a>.</p>
             <p><strong>Created by:</strong> Dekel Cohen</p>

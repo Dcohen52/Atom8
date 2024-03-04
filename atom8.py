@@ -1297,7 +1297,7 @@ class Atom8(QMainWindow):
         </head>
         <body>
             <h2>Atom8</h2>
-            <p><strong>Version:</strong> 0.0.3-dev b04032024-1)</p>
+            <p><strong>Version:</strong> 0.0.3-dev b04032024-1</p>
             <p>Atom8 is a robust and user-friendly web automation platform, offering enhanced capabilities for both professionals and enthusiasts. This tool streamlines complex web tasks, providing an advanced yet seamless automation experience. It's perfect for a variety of applications, including data scraping, automated testing, and more.</p>
             <p>Built upon the popular Selenium framework, Atom8 stands out as a more accessible alternative, boasting a straightforward interface for creating and executing both simple and complex automation scripts.</p>
             <p>Explore more about Atom8, get the latest updates, and access support on our GitHub page: <a href="https://github.com/Dcohen52/Atom8" target="_blank">Atom8 GitHub Repository</a>.</p>

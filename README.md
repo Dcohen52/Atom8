@@ -1,5 +1,5 @@
 # Atom8
-[![Version](https://img.shields.io/badge/0.0.1-dev-blue)](https://github.com/Dcohen52/Atom8/tree/main)
+[![Version](https://img.shields.io/badge/0.0.3-dev-blue)](https://github.com/Dcohen52/Atom8/tree/main)
 [![License](https://img.shields.io/badge/License-MIT-green)](https://mit-license.org/)
 ## Overview
 
@@ -20,6 +20,7 @@ If there are any issues with usage, please run the command 'pip install -r requi
 - **Step-by-Step Automation Process Construction:** Users can build automation processes step-by-step, with options to add, edit, or remove steps as needed.
 - **Customizable Web Actions:** Atom8 allows for a variety of web actions, including navigation, clicking elements, entering text, and more.
 - **Python Script Execution:** Atom8 enables the execution of Python scripts, allowing for more complex automation sequences.
+- **Powerful, Yet Friendly Sequencer:** The sequencer allow users to create complex automation sequences with ease.
 - **Logging Capability:** Features a logging system that records detailed information about automation processes for troubleshooting and analysis.
 - **Headless Browser Support:** Offers headless mode execution, enabling automation in environments without a display.
 - **Browser Compatibility:** Compatible with major web browsers like Chrome and Edge, providing flexibility in automation tasks.

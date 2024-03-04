@@ -22,7 +22,7 @@ from helper import extract_elements_to_json
 import platform
 import cv2
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 __build__ = "04032024-1"
 
 
@@ -1297,7 +1297,7 @@ class Atom8(QMainWindow):
         </head>
         <body>
             <h2>Atom8</h2>
-            <p><strong>Version:</strong> {0}-dev b{1})</p>
+            <p><strong>Version:</strong> 0.0.3-dev b04032024-1)</p>
             <p>Atom8 is a robust and user-friendly web automation platform, offering enhanced capabilities for both professionals and enthusiasts. This tool streamlines complex web tasks, providing an advanced yet seamless automation experience. It's perfect for a variety of applications, including data scraping, automated testing, and more.</p>
             <p>Built upon the popular Selenium framework, Atom8 stands out as a more accessible alternative, boasting a straightforward interface for creating and executing both simple and complex automation scripts.</p>
             <p>Explore more about Atom8, get the latest updates, and access support on our GitHub page: <a href="https://github.com/Dcohen52/Atom8" target="_blank">Atom8 GitHub Repository</a>.</p>
@@ -1306,7 +1306,7 @@ class Atom8(QMainWindow):
             <p><strong>Disclaimer:</strong> Atom8 is an independent project and is not officially affiliated with or endorsed by the Selenium project or its associates.</p>
         </body>
         </html>
-        """.format(__version__, __build__))
+        """)
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Error while showing about dialog: {e}")
 

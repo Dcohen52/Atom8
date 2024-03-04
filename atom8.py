@@ -9,7 +9,7 @@ from PyQt5.QtGui import QColor, QTextFormat, QPainter, QPixmap, QIcon
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLineEdit, QLabel, QComboBox, \
     QListWidget, QHBoxLayout, QAction, QMessageBox, QFileDialog, QStatusBar, QCheckBox, QTextEdit, QInputDialog, \
     QDialog, QTableWidgetItem, QTableWidget, QMenu, QHeaderView, QPlainTextEdit, QTabWidget, QGroupBox, QScrollArea, \
-    QSplashScreen
+    QSplashScreen, QMenuBar
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -20,10 +20,10 @@ from openpyxl.styles import Font, PatternFill
 from openpyxl.utils.dataframe import dataframe_to_rows
 from helper import extract_elements_to_json
 import platform
+import cv2
 
-"""
-pip install -r requirements.txt
-"""
+__version__ = "0.0.2"
+__build__ = "04032024-1"
 
 
 class CustomComboBox(QComboBox):
@@ -157,13 +157,14 @@ class ScriptEditor(QPlainTextEdit):
 class Atom8(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.splash = QSplashScreen(QPixmap("_internal/assets/splash.png"))  # Path to your splash screen image
-        self.splash.showMessage("Loading Atom8...", Qt.AlignHCenter | Qt.AlignBottom, Qt.white)
+        self.splash = QSplashScreen(QPixmap("_internal/assets/splash.png"))
+        splash_message = f"Loading Atom8...\nVersion: v{__version__}"
+        self.splash.showMessage(splash_message, Qt.AlignLeft | Qt.AlignBottom, Qt.white)
+
         self.splash.show()
-        time.sleep(3)  # Show splash screen for 3 seconds
+        time.sleep(3)
         self.splash.finish(self)
 
-        # set qicon
         self.setWindowIcon(QIcon("_internal/assets/atom-8-icon.png"))
 
         self.driver = None
@@ -391,8 +392,6 @@ class Atom8(QMainWindow):
         }
         """
 
-        # set taskbar icon
-
         self.setWindowTitle('Atom8')
         self.setGeometry(100, 100, 800, 800)
         self.statusBar = QStatusBar()
@@ -517,7 +516,6 @@ class Atom8(QMainWindow):
             fileMenu.addAction(openAction)
 
             self.recentFilesMenu = fileMenu.addMenu('Open Recent')
-            # set the style of the recent files menu
             self.recentFilesMenu.setStyleSheet("QMenu::item { width: 250px; }")
 
             self.updateRecentFilesMenu()
@@ -554,6 +552,11 @@ class Atom8(QMainWindow):
             extractElementsAction.setShortcut('Ctrl+E')
             toolsMenu.addAction(extractElementsAction)
 
+            sequencerAction = QAction('Create Sequence', self)
+            sequencerAction.triggered.connect(self.showSequencer)
+            sequencerAction.setShortcut('Ctrl+Shift+S')
+            toolsMenu.addAction(sequencerAction)
+
             scriptEditorAction = QAction('Script Editor', self)
             scriptEditorAction.triggered.connect(self.showScriptEditor)
             toolsMenu.addAction(scriptEditorAction)
@@ -577,6 +580,7 @@ class Atom8(QMainWindow):
             QMessageBox.warning(self, "Error", f"Error while setting up menu bar: {e}")
 
     def addStep(self):
+        # STEPS
         try:
             action = self.actionSelection.currentText()
             locator_type = self.locatorSelection.currentText()
@@ -608,6 +612,13 @@ class Atom8(QMainWindow):
                 step = (action, screenshot_filename)
                 display_txt = f'Take screenshot and save as {screenshot_filename}'
                 self.logger.info(f"Added step: {display_txt}")
+            elif action == 'Compare Images':
+                ref_img_path = self.refImgPath.text()
+                test_img_path = self.testImgPath.text()
+                output_path = self.outputPath.text()
+                step = (action, ref_img_path, test_img_path, output_path)
+                display_txt = f'Compare images: Reference: {ref_img_path}, Test: {test_img_path}, Output: {output_path}'
+                self.logger.info(f"Added step: {display_txt}")
             else:
                 QMessageBox.warning(self, "Invalid Action", "The selected action is not supported.")
                 return
@@ -634,7 +645,7 @@ class Atom8(QMainWindow):
         try:
             self.actionSelection = QComboBox(self)
             actions = ['Select Action', 'Navigate to URL', 'Click Element', 'Input Text', 'Take Screenshot',
-                       'Execute JavaScript', 'Sleep', 'Execute Python Script', 'Maximize Window']
+                       'Execute JavaScript', 'Sleep', 'Execute Python Script', 'Maximize Window', 'Compare Images']
             self.actionSelection.addItems(actions)
             self.actionSelection.currentIndexChanged.connect(self.updateFields)
 
@@ -666,10 +677,26 @@ class Atom8(QMainWindow):
             self.inputDescription = QLineEdit(self)
             self.inputDescription.setPlaceholderText("Enter Description")
 
+            self.refImgPath = QLineEdit(self)
+            self.refImgPath.setPlaceholderText("Enter Reference Image Path")
+
+            self.testImgPath = QLineEdit(self)
+            self.testImgPath.setPlaceholderText("Enter Test Image Path")
+
+            self.outputPath = QLineEdit(self)
+            self.outputPath.setPlaceholderText("Enter Output Path")
+
             fieldsLayout = QVBoxLayout()
             fieldsLayout.addWidget(self.inputText)
             fieldsLayout.addWidget(self.sleepInput)
             fieldsLayout.addWidget(self.inputDescription)
+            fieldsLayout.addWidget(self.refImgPath)
+            fieldsLayout.addWidget(self.testImgPath)
+            fieldsLayout.addWidget(self.outputPath)
+
+            self.refImgPath.setVisible(False)
+            self.testImgPath.setVisible(False)
+            self.outputPath.setVisible(False)
 
             actionSelectionLayout.addLayout(fieldsLayout)
             layout.addLayout(actionSelectionLayout)
@@ -820,6 +847,9 @@ class Atom8(QMainWindow):
             self.inputDescription.setVisible(
                 action in ['Click Element', 'Input Text', 'Sleep', 'Navigate to URL', 'Execute Python Script',
                            'Execute JavaScript'])
+            self.refImgPath.setVisible(action == 'Compare Images')
+            self.testImgPath.setVisible(action == 'Compare Images')
+            self.outputPath.setVisible(action == 'Compare Images')
 
             if action == 'Navigate to URL':
                 self.inputText.setPlaceholderText("Enter URL")
@@ -1103,6 +1133,7 @@ class Atom8(QMainWindow):
                 for step in self.steps:
                     action = step[0]
                     try:
+                        # STEP
                         if action == 'Navigate to URL':
                             try:
                                 self.driver.get(step[1])
@@ -1122,8 +1153,14 @@ class Atom8(QMainWindow):
                                 self.logger.error(f"Error while performing {action}: {e}")
                         elif action == 'Take Screenshot':
                             try:
-                                self.driver.save_screenshot(step[1])
-                                self.logger.info(f"Screenshot saved as {step[1]}")
+                                with open(self.settingsFilePath(), "r") as settings_file:
+                                    settings = json.load(settings_file)
+                                    screenshot_folder = settings.get("savePath")
+                                    if not os.path.isdir(screenshot_folder):
+                                        os.makedirs(screenshot_folder)
+                                    screenshot_filename = os.path.join(screenshot_folder, step[1])
+                                    self.driver.save_screenshot(screenshot_filename)
+                                    self.logger.info(f"Screenshot saved as {screenshot_filename}")
                             except Exception as e:
                                 self.logger.error(f"Error while taking screenshot: {e}")
                         elif action == 'Execute JavaScript':
@@ -1150,6 +1187,16 @@ class Atom8(QMainWindow):
                                 self.logger.info(f"Executed Python script: {step[1]}")
                             except Exception as e:
                                 self.logger.error(f"Error in Python script: {e}")
+                        elif action == 'Compare Images':
+                            try:
+                                self.logger.info(f"Comparing images: {step[1]} and {step[2]}")
+                                if self.compareImages(step[1], step[2], step[3]):
+                                    self.results.append((step, 'Passed'))
+                                else:
+                                    self.results.append((step, 'Failed'))
+                            except Exception as e:
+                                self.logger.error(f"Error in {action}: {e}")
+                                self.results.append((step, 'Failed'))
 
                         self.results.append((step, 'Passed'))
 
@@ -1183,6 +1230,7 @@ class Atom8(QMainWindow):
     #         QMessageBox.warning(self, "Error", f"Error while stopping the script: {e}")
 
     def formatStepText(self, step):
+        # STEP
         try:
             action = step[0]
             if action == 'Sleep':
@@ -1195,6 +1243,8 @@ class Atom8(QMainWindow):
                 return f'Take screenshot: {step[1]}'
             elif action == 'Maximize Window':
                 return 'Maximize Window'
+            elif action == 'Compare Images':
+                return f'Comparing images: {step[1]} and {step[2]}'
             else:
                 return 'Unknown Action'
         except Exception as e:
@@ -1247,7 +1297,7 @@ class Atom8(QMainWindow):
         </head>
         <body>
             <h2>Atom8</h2>
-            <p><strong>Version:</strong> 1.0-dev b29022024-1</p>
+            <p><strong>Version:</strong> {0}-dev b{1})</p>
             <p>Atom8 is a robust and user-friendly web automation platform, offering enhanced capabilities for both professionals and enthusiasts. This tool streamlines complex web tasks, providing an advanced yet seamless automation experience. It's perfect for a variety of applications, including data scraping, automated testing, and more.</p>
             <p>Built upon the popular Selenium framework, Atom8 stands out as a more accessible alternative, boasting a straightforward interface for creating and executing both simple and complex automation scripts.</p>
             <p>Explore more about Atom8, get the latest updates, and access support on our GitHub page: <a href="https://github.com/Dcohen52/Atom8" target="_blank">Atom8 GitHub Repository</a>.</p>
@@ -1256,7 +1306,7 @@ class Atom8(QMainWindow):
             <p><strong>Disclaimer:</strong> Atom8 is an independent project and is not officially affiliated with or endorsed by the Selenium project or its associates.</p>
         </body>
         </html>
-        """)
+        """.format(__version__, __build__))
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Error while showing about dialog: {e}")
 
@@ -1379,6 +1429,7 @@ class Atom8(QMainWindow):
             QMessageBox.warning(self, "Error", f"Error while opening file: {e}")
 
     def constructStepDisplayText(self, step):
+        # STEP
         try:
             action = step[0]
             if action == 'Sleep':
@@ -1389,6 +1440,8 @@ class Atom8(QMainWindow):
                 display_text = f'{action}: {step[1]}{"." if not step[2] else f", Description: {step[2]}"}'
             elif action == 'Take Screenshot':
                 display_text = f'Take screenshot and save as {step[1]}'
+            elif action == 'Compare Images':
+                display_text = f'Comparing images: {step[1]} and {step[2]}'
             else:
                 display_text = f'{action}'
         except Exception as e:
@@ -1707,6 +1760,7 @@ class Atom8(QMainWindow):
             bugReport += "| Step Number | Action | Value  | Expected Result | Actual Result | Status |\n"
             bugReport += "|-------------|--------|--------|-----------------|---------------|--------|\n"
             for index, step in enumerate(self.steps):
+                # STEP
                 stepNumber = index + 1
                 action = step[0]
                 value = ""
@@ -1725,6 +1779,9 @@ class Atom8(QMainWindow):
                     expected = f'Take screenshot: {step[1]}'
                 elif action == 'Maximize Window':
                     expected = 'Maximize Window'
+                elif action == 'Compare Images':
+                    value = f'Image 1: {step[1]}, Image 2: {step[2]}'
+                    expected = f'Compare images: {step[1]} and {step[2]}'
                 else:
                     expected = 'Unknown Action'
 
@@ -1766,6 +1823,7 @@ class Atom8(QMainWindow):
         self.logViewer.clear()
 
     def editSelectedStep(self):
+        # STEP
         try:
             selected_item = self.stepsList.currentRow()
             if selected_item >= 0:
@@ -1812,6 +1870,15 @@ class Atom8(QMainWindow):
                 elif action == 'Take Screenshot':
                     self.inputText.setPlaceholderText("Enter Screenshot Name")
                     self.inputText.setText(step[1])
+                elif action == 'Compare Images':
+                    self.refImgPath.setVisible(True)
+                    self.refImgPath.setText(step[1])
+                    self.compImgPath.setVisible(True)
+                    self.compImgPath.setText(step[2])
+                    self.inputText.setVisible(False)
+                    self.sleepInput.setVisible(False)
+                    self.locatorSelection.setVisible(False)
+                    self.locatorInput.setVisible(False)
                 else:
                     self.inputText.setPlaceholderText("Enter Text")
                     self.inputText.setText(step[1])
@@ -1823,6 +1890,7 @@ class Atom8(QMainWindow):
             QMessageBox.warning(self, "Error", f"Error while editing step: {e}")
 
     def updateStep(self):
+        # STEP
         try:
             selected_item = self.stepsList.currentRow()
             if selected_item >= 0:
@@ -1848,6 +1916,9 @@ class Atom8(QMainWindow):
                 elif action == 'Maximize Window':
                     step = action
                     display_txt = f'Maximize Window.'
+                elif action == 'Compare Images':
+                    step = (action, self.refImgPath.text(), self.compImgPath.text())
+                    display_txt = f'Comparing images: {self.refImgPath.text()} and {self.compImgPath.text()}'
                 else:
                     QMessageBox.warning(self, "Invalid Action", "The selected action is not supported.")
                     return
@@ -1972,6 +2043,188 @@ class Atom8(QMainWindow):
                     QMessageBox.critical(self, "Error", f"Failed to extract elements: {e}")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Error while extracting web elements: {e}")
+
+    def showSequencer(self):
+        try:
+            self.sequencerWindow = QDialog(self, Qt.Window)
+            self.sequencerWindow.setWindowTitle("Sequencer")
+            sequencerLayout = QVBoxLayout()
+
+            menuBar = QMenuBar()
+            fileMenu = menuBar.addMenu("Options")
+
+            createSequenceAction = QAction("Create Sequence", self)
+            createSequenceAction.triggered.connect(self.chooseAtm8File)
+            fileMenu.addAction(createSequenceAction)
+
+            saveSequenceAction = QAction("Save Sequence", self)
+            saveSequenceAction.triggered.connect(self.saveSequence)
+            fileMenu.addAction(saveSequenceAction)
+
+            loadSequenceAction = QAction("Load Sequence", self)
+            loadSequenceAction.triggered.connect(self.loadSequence)
+            fileMenu.addAction(loadSequenceAction)
+
+            fileMenu.addSeparator()
+
+            runSequenceAction = QAction("Run Sequence", self)
+            runSequenceAction.triggered.connect(self.runSequencer)
+            fileMenu.addAction(runSequenceAction)
+
+            sequencerLayout.setMenuBar(menuBar)
+
+            buttonLayout = QHBoxLayout()
+
+            self.chooseFileButton = QPushButton("Choose Files")
+            self.chooseFileButton.clicked.connect(self.chooseAtm8File)
+            buttonLayout.addWidget(self.chooseFileButton)
+
+            self.removeFileButton = QPushButton("Remove File")
+            self.removeFileButton.clicked.connect(self.removeAtm8File)
+            self.removeFileButton.setProperty("class", "secondary-btn")
+            buttonLayout.addWidget(self.removeFileButton)
+
+            self.loadToMainEditorButton = QPushButton("Load to Main Editor")
+            self.loadToMainEditorButton.clicked.connect(self.loadToMainEditor)
+            self.loadToMainEditorButton.setProperty("class", "secondary-btn")
+            buttonLayout.addWidget(self.loadToMainEditorButton)
+
+            self.runSequencerButton = QPushButton("Run Sequence")
+            self.runSequencerButton.clicked.connect(self.runSequencer)
+            self.runSequencerButton.setProperty("class", "primary-btn")
+            buttonLayout.addWidget(self.runSequencerButton)
+
+            self.runSequencerButton.setStyleSheet("""
+                QPushButton {
+                    color: white;
+                    background-color: #28A745;
+                    border-radius: 4px;
+                    padding: 6px 12px;
+                    border: none;
+                    font-size: 12px;
+                }
+
+                QPushButton:hover {
+                    background-color: #218838;
+                    border-color: #1E7E34;
+                }
+
+                QPushButton:pressed {
+                    background-color: #1D7D33;
+                    border-color: #1C7430;
+                }
+            """)
+
+            self.generateReport = QCheckBox("Generate Report")
+            sequencerLayout.addWidget(self.generateReport)
+
+            sequencerLayout.addLayout(buttonLayout)
+
+            self.atm8FilesList = QListWidget()
+            sequencerLayout.addWidget(self.atm8FilesList)
+
+            self.sequencerWindow.setLayout(sequencerLayout)
+            self.sequencerWindow.resize(600, 400)
+            self.sequencerWindow.show()
+
+
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while showing sequencer: {e}")
+
+    def chooseAtm8File(self):
+        try:
+            options = QFileDialog.Options()
+            fileNames, _ = QFileDialog.getOpenFileNames(self, "Choose Files", "", "Atom8 Files (*.atm8)",
+                                                        options=options)
+            if fileNames:
+                self.atm8FilesList.addItems(fileNames)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while choosing atm8 file: {e}")
+
+    def runSequencer(self, fileNames):
+        try:
+            self.steps.clear()
+            for i in range(self.atm8FilesList.count()):
+                file_name = self.atm8FilesList.item(i).text()
+                with open(file_name, "r") as file:
+                    file_content = json.load(file)
+                    if not isinstance(file_content, dict) or "steps" not in file_content:
+                        raise ValueError("File content is not in the expected format")
+
+                    for step in file_content["steps"]:
+                        self.steps.append(step)
+                        display_text = self.constructStepDisplayText(step)
+                        self.stepsList.addItem(display_text)
+            self.logger.info("Running sequencer.")
+            self.startAutomation()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while running sequencer: {e}")
+
+    def removeAtm8File(self):
+        try:
+            selected_item = self.atm8FilesList.currentRow()
+            if selected_item >= 0:
+                self.atm8FilesList.takeItem(selected_item)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while removing atm8 file: {e}")
+
+    def loadToMainEditor(self):
+        try:
+            selected_item = self.atm8FilesList.currentRow()
+            if selected_item >= 0:
+                file_name = self.atm8FilesList.item(selected_item).text()
+                self.openRecentFile(file_name)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while loading to main editor: {e}")
+
+    def loadSequence(self):
+        try:
+            options = QFileDialog.Options()
+            fileName, _ = QFileDialog.getOpenFileName(self, "Open File", "", "Sequence Files (*.seq)", options=options)
+            if fileName:
+                with open(fileName, "r") as file:
+                    sequence_content = json.load(file)
+                    if not isinstance(sequence_content, list):
+                        raise ValueError("Sequence content is not in the expected format")
+
+                    for file_name in sequence_content:
+                        self.atm8FilesList.addItem(file_name)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to open file: {e}")
+
+    def saveSequence(self):
+        try:
+            options = QFileDialog.Options()
+            fileName, _ = QFileDialog.getSaveFileName(self, "Save Sequence", "", "Sequence Files (*.seq)",
+                                                      options=options)
+            if fileName:
+                sequence_content = [self.atm8FilesList.item(i).text() for i in range(self.atm8FilesList.count())]
+                with open(fileName, "w") as file:
+                    json.dump(sequence_content, file)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error while saving sequence: {e}")
+
+    def compareImages(self, reference_path, test_path, output_path):
+        reference = cv2.imread(reference_path)
+        test = cv2.imread(test_path)
+
+        difference = cv2.absdiff(reference, test)
+        gray = cv2.cvtColor(difference, cv2.COLOR_BGR2GRAY)
+
+        _, thresh = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        overlay = test.copy()
+        overlay[:] = (0, 0, 0)
+
+        cv2.addWeighted(overlay, 0.5, test, 0.5, 0, test)
+
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            cv2.rectangle(test, (x, y), (x + w, y + h), (0, 255, 0), 1)
+
+        cv2.imwrite(output_path, test)
+        return output_path
 
     def showExtractionResult(self, elements_data):
         try:

@@ -178,6 +178,7 @@ class Atom8(QMainWindow):
         self.resultsTable = None
         self.setupScriptEditor()
         self.results = []
+        self.loadWhenDone = False
 
     def initUI(self):
 
@@ -678,13 +679,20 @@ class Atom8(QMainWindow):
             self.inputDescription.setPlaceholderText("Enter Description")
 
             self.refImgPath = QLineEdit(self)
+            self.refImgPath.setToolTip("Enter the path of the reference image to compare")
             self.refImgPath.setPlaceholderText("Enter Reference Image Path")
 
             self.testImgPath = QLineEdit(self)
-            self.testImgPath.setPlaceholderText("Enter Test Image Path")
+            self.testImgPath.setToolTip("Enter the name of the image, with '.png', to compare with the reference image")
+            self.testImgPath.setPlaceholderText("Enter File Name")
 
             self.outputPath = QLineEdit(self)
+            self.outputPath.setToolTip("Enter the path where the output image should be saved")
             self.outputPath.setPlaceholderText("Enter Output Path")
+
+            self.openPhoto = QCheckBox("Open Photo When Done", self)
+            self.openPhoto.setToolTip("Open the photo after comparing images")
+            self.openPhoto.setChecked(False)
 
             fieldsLayout = QVBoxLayout()
             fieldsLayout.addWidget(self.inputText)
@@ -693,10 +701,12 @@ class Atom8(QMainWindow):
             fieldsLayout.addWidget(self.refImgPath)
             fieldsLayout.addWidget(self.testImgPath)
             fieldsLayout.addWidget(self.outputPath)
+            fieldsLayout.addWidget(self.openPhoto)
 
             self.refImgPath.setVisible(False)
             self.testImgPath.setVisible(False)
             self.outputPath.setVisible(False)
+            self.openPhoto.setVisible(False)
 
             actionSelectionLayout.addLayout(fieldsLayout)
             layout.addLayout(actionSelectionLayout)
@@ -850,6 +860,7 @@ class Atom8(QMainWindow):
             self.refImgPath.setVisible(action == 'Compare Images')
             self.testImgPath.setVisible(action == 'Compare Images')
             self.outputPath.setVisible(action == 'Compare Images')
+            self.openPhoto.setVisible(action == 'Compare Images')
 
             if action == 'Navigate to URL':
                 self.inputText.setPlaceholderText("Enter URL")
@@ -1192,6 +1203,8 @@ class Atom8(QMainWindow):
                                 self.logger.info(f"Comparing images: {step[1]} and {step[2]}")
                                 if self.compareImages(step[1], step[2], step[3]):
                                     self.results.append((step, 'Passed'))
+                                    if self.openPhoto.isChecked():
+                                        os.startfile(step[3])
                                 else:
                                     self.results.append((step, 'Failed'))
                             except Exception as e:
@@ -1297,16 +1310,16 @@ class Atom8(QMainWindow):
         </head>
         <body>
             <h2>Atom8</h2>
-            <p><strong>Version:</strong> 0.0.3-dev b04032024-1</p>
+            <p><strong>Version:</strong> %s-dev b%s</p>
             <p>Atom8 is a robust and user-friendly web automation platform, offering enhanced capabilities for both professionals and enthusiasts. This tool streamlines complex web tasks, providing an advanced yet seamless automation experience. It's perfect for a variety of applications, including data scraping, automated testing, and more.</p>
-            <p>Built upon the popular Selenium framework, Atom8 stands out as a more accessible alternative, boasting a straightforward interface for creating and executing both simple and complex automation scripts.</p>
+            <p>Built upon the popular Selenium framework for basic operations, Atom8 stands out as a more accessible alternative, boasting a straightforward interface for creating and executing both simple and complex automation scripts.</p>
             <p>Explore more about Atom8, get the latest updates, and access support on our GitHub page: <a href="https://github.com/Dcohen52/Atom8" target="_blank">Atom8 GitHub Repository</a>.</p>
             <p><strong>Created by:</strong> Dekel Cohen</p>
             <p><strong>License:</strong> MIT License</p>
             <p><strong>Disclaimer:</strong> Atom8 is an independent project and is not officially affiliated with or endorsed by the Selenium project or its associates.</p>
         </body>
         </html>
-        """)
+        """ % (__version__, __build__))
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Error while showing about dialog: {e}")
 
@@ -1988,6 +2001,8 @@ class Atom8(QMainWindow):
             self.inputText.setText('')
             self.sleepInput.setText('')
             self.inputDescription.setText('')
+            self.refImgPath.setText('')
+            self.compImgPath.setText('')
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Error while clearing input fields: {e}")
 
@@ -2205,8 +2220,19 @@ class Atom8(QMainWindow):
             QMessageBox.warning(self, "Error", f"Error while saving sequence: {e}")
 
     def compareImages(self, reference_path, test_path, output_path):
+        self.driver.save_screenshot(test_path)
+
         reference = cv2.imread(reference_path)
-        test = cv2.imread(test_path)
+        with open(self.settingsFilePath(), "r") as settings_file:
+            settings = json.load(settings_file)
+            screenshot_folder = settings.get("savePath")
+            if not os.path.isdir(screenshot_folder):
+                os.makedirs(screenshot_folder)
+            screenshot_filename = os.path.join(screenshot_folder, test_path)
+            self.driver.save_screenshot(screenshot_filename)
+            self.logger.info(f"[Compare Images] -> Screenshot saved as {screenshot_filename}")
+
+            test = cv2.imread(screenshot_filename)
 
         difference = cv2.absdiff(reference, test)
         gray = cv2.cvtColor(difference, cv2.COLOR_BGR2GRAY)
@@ -2224,6 +2250,7 @@ class Atom8(QMainWindow):
             cv2.rectangle(test, (x, y), (x + w, y + h), (0, 255, 0), 1)
 
         cv2.imwrite(output_path, test)
+
         return output_path
 
     def showExtractionResult(self, elements_data):

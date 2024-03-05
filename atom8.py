@@ -9,7 +9,7 @@ from PyQt5.QtGui import QColor, QTextFormat, QPainter, QPixmap, QIcon
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLineEdit, QLabel, QComboBox, \
     QListWidget, QHBoxLayout, QAction, QMessageBox, QFileDialog, QStatusBar, QCheckBox, QTextEdit, QInputDialog, \
     QDialog, QTableWidgetItem, QTableWidget, QMenu, QHeaderView, QPlainTextEdit, QTabWidget, QGroupBox, QScrollArea, \
-    QSplashScreen, QMenuBar
+    QSplashScreen, QMenuBar, QFrame
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -1485,53 +1485,160 @@ class Atom8(QMainWindow):
             self.prefsWindow.setWindowTitle("Preferences")
             prefsLayout = QVBoxLayout()
 
+            # Create a tab widget for different preference sections
+            tabWidget = QTabWidget()
+            prefsLayout.addWidget(tabWidget)
+
+            # General settings tab
+            generalTab = QWidget()
+            generalLayout = QVBoxLayout()
+
             browserLabel = QLabel("Default Browser:")
             self.browserComboBox = QComboBox()
             self.browserComboBox.addItems(["Chrome", "Firefox", "Safari", "Edge"])
             self.browserComboBox.setCurrentText(self.loadSetting("defaultBrowser", "Chrome"))
-
             browserLayout = QHBoxLayout()
             browserLayout.addWidget(browserLabel)
             browserLayout.addWidget(self.browserComboBox)
-            prefsLayout.addLayout(browserLayout)
+            generalLayout.addLayout(browserLayout)
 
             savePathLabel = QLabel("Default Screenshots Save Path:")
             self.savePathLineEdit = QLineEdit()
             current_save_path = self.loadSetting("savePath", "")
             if current_save_path:
                 self.savePathLineEdit.setText(current_save_path)
-
             savePathButton = QPushButton("Choose")
             savePathButton.clicked.connect(self.chooseSavePathLocation)
             savePathLayout = QHBoxLayout()
             savePathLayout.addWidget(savePathLabel)
             savePathLayout.addWidget(self.savePathLineEdit)
             savePathLayout.addWidget(savePathButton)
-            prefsLayout.addLayout(savePathLayout)
+            generalLayout.addLayout(savePathLayout)
 
             driverLocationLabel = QLabel("Chrome Driver Location:")
             self.driverLocationLineEdit = QLineEdit()
             self.driverLocationLineEdit.setText(self.loadSetting("driverLocation", ""))
             driverLocationButton = QPushButton("Choose")
             driverLocationButton.clicked.connect(self.chooseChromeDriverLocation)
-
             driverLocationLayout = QHBoxLayout()
             driverLocationLayout.addWidget(driverLocationLabel)
             driverLocationLayout.addWidget(self.driverLocationLineEdit)
             driverLocationLayout.addWidget(driverLocationButton)
-            prefsLayout.addLayout(driverLocationLayout)
+            generalLayout.addLayout(driverLocationLayout)
 
             msedgeLocationLabel = QLabel("Edge Driver Location:")
             self.msedgeLocationLineEdit = QLineEdit()
             self.msedgeLocationLineEdit.setText(self.loadSetting("msedgeLocation", ""))
             msedgeLocationButton = QPushButton("Choose")
             msedgeLocationButton.clicked.connect(self.chooseMsEdgeDriverLocation)
-
             msedgeLocationLayout = QHBoxLayout()
             msedgeLocationLayout.addWidget(msedgeLocationLabel)
             msedgeLocationLayout.addWidget(self.msedgeLocationLineEdit)
             msedgeLocationLayout.addWidget(msedgeLocationButton)
-            prefsLayout.addLayout(msedgeLocationLayout)
+            generalLayout.addLayout(msedgeLocationLayout)
+
+            generalTab.setLayout(generalLayout)
+            tabWidget.addTab(generalTab, "General")
+
+            # ProofHub settings tab
+            proofhubTab = QWidget()
+            proofhubLayout = QVBoxLayout()
+
+            proofhubAPI = QLabel("ProofHub API Key:")
+            self.proofhubAPIKey = QLineEdit()
+            self.proofhubAPIKey.setText(self.loadSetting("proofhubAPIKey", ""))
+            proofhubAPILayout = QHBoxLayout()
+            proofhubAPILayout.addWidget(proofhubAPI)
+            proofhubAPILayout.addWidget(self.proofhubAPIKey)
+            proofhubLayout.addLayout(proofhubAPILayout)
+
+            proofhubProject = QLabel("ProofHub Project ID:")
+            self.proofhubProjectID = QLineEdit()
+            self.proofhubProjectID.setText(self.loadSetting("proofhubProjectID", ""))
+            proofhubProjectLayout = QHBoxLayout()
+            proofhubProjectLayout.addWidget(proofhubProject)
+            proofhubProjectLayout.addWidget(self.proofhubProjectID)
+            proofhubLayout.addLayout(proofhubProjectLayout)
+
+            proofhubTaskList = QLabel("ProofHub Task List ID:")
+            self.proofhubTaskListID = QLineEdit()
+            self.proofhubTaskListID.setText(self.loadSetting("proofhubTaskListID", ""))
+            proofhubTaskListLayout = QHBoxLayout()
+            proofhubTaskListLayout.addWidget(proofhubTaskList)
+            proofhubTaskListLayout.addWidget(self.proofhubTaskListID)
+            proofhubLayout.addLayout(proofhubTaskListLayout)
+
+            proofhubTab.setLayout(proofhubLayout)
+            tabWidget.addTab(proofhubTab, "ProofHub")
+
+            # JIRA settings tab
+            jiraTab = QWidget()
+            jiraLayout = QVBoxLayout()
+
+            jiraURLLabel = QLabel("JIRA URL:")
+            self.jiraURLLineEdit = QLineEdit()
+            self.jiraURLLineEdit.setText(self.loadSetting("jiraURL", ""))
+            jiraURLLayout = QHBoxLayout()
+            jiraURLLayout.addWidget(jiraURLLabel)
+            jiraURLLayout.addWidget(self.jiraURLLineEdit)
+            jiraLayout.addLayout(jiraURLLayout)
+
+            jiraUserLabel = QLabel("JIRA Username:")
+            self.jiraUserLineEdit = QLineEdit()
+            self.jiraUserLineEdit.setText(self.loadSetting("jiraUsername", ""))
+            jiraUserLayout = QHBoxLayout()
+            jiraUserLayout.addWidget(jiraUserLabel)
+            jiraUserLayout.addWidget(self.jiraUserLineEdit)
+            jiraLayout.addLayout(jiraUserLayout)
+
+            jiraTokenLabel = QLabel("JIRA API Token:")
+            self.jiraTokenLineEdit = QLineEdit()
+            self.jiraTokenLineEdit.setText(self.loadSetting("jiraAPIToken", ""))
+            jiraTokenLayout = QHBoxLayout()
+            jiraTokenLayout.addWidget(jiraTokenLabel)
+            jiraTokenLayout.addWidget(self.jiraTokenLineEdit)
+            jiraLayout.addLayout(jiraTokenLayout)
+
+            jiraTab.setLayout(jiraLayout)
+            tabWidget.addTab(jiraTab, "JIRA")
+
+            # Monday settings tab
+            mondayTab = QWidget()
+            mondayLayout = QVBoxLayout()
+
+            mondayURLLabel = QLabel("Monday URL:")
+            self.mondayURLLineEdit = QLineEdit()
+            self.mondayURLLineEdit.setText(self.loadSetting("mondayURL", ""))
+            mondayURLLayout = QHBoxLayout()
+            mondayURLLayout.addWidget(mondayURLLabel)
+            mondayURLLayout.addWidget(self.mondayURLLineEdit)
+            mondayLayout.addLayout(mondayURLLayout)
+
+            mondayTokenLabel = QLabel("Monday API Token:")
+            self.mondayTokenLineEdit = QLineEdit()
+            self.mondayTokenLineEdit.setText(self.loadSetting("mondayAPIToken", ""))
+            mondayTokenLayout = QHBoxLayout()
+            mondayTokenLayout.addWidget(mondayTokenLabel)
+            mondayTokenLayout.addWidget(self.mondayTokenLineEdit)
+            mondayLayout.addLayout(mondayTokenLayout)
+
+            mondayTab.setLayout(mondayLayout)
+            tabWidget.addTab(mondayTab, "Monday")
+
+            # ClickUp settings tab
+            clickupTab = QWidget()
+            clickupLayout = QVBoxLayout()
+
+            clickupTokenLabel = QLabel("ClickUp API Token:")
+            self.clickupTokenLineEdit = QLineEdit()
+            self.clickupTokenLineEdit.setText(self.loadSetting("clickupAPIToken", ""))
+            clickupTokenLayout = QHBoxLayout()
+            clickupTokenLayout.addWidget(clickupTokenLabel)
+            clickupTokenLayout.addWidget(self.clickupTokenLineEdit)
+            clickupLayout.addLayout(clickupTokenLayout)
+
+            clickupTab.setLayout(clickupLayout)
+            tabWidget.addTab(clickupTab, "ClickUp")
 
             saveButton = QPushButton("Save")
             saveButton.clicked.connect(self.savePrefs)
@@ -1540,6 +1647,7 @@ class Atom8(QMainWindow):
             self.prefsWindow.setLayout(prefsLayout)
             self.prefsWindow.resize(600, 300)
             self.prefsWindow.show()
+
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Error while opening preferences: {e}")
 
@@ -1573,6 +1681,15 @@ class Atom8(QMainWindow):
             self.saveSetting("savePath", self.savePathLineEdit.text())
             self.saveSetting("driverLocation", self.driverLocationLineEdit.text())
             self.saveSetting("msedgeLocation", self.msedgeLocationLineEdit.text())
+            self.saveSetting("proofhubAPIKey", self.proofhubAPIKey.text())
+            self.saveSetting("proofhubProjectID", self.proofhubProjectID.text())
+            self.saveSetting("proofhubTaskListID", self.proofhubTaskListID.text())
+            self.saveSetting("jiraURL", self.jiraURLLineEdit.text())
+            self.saveSetting("jiraUsername", self.jiraUserLineEdit.text())
+            self.saveSetting("jiraAPIToken", self.jiraTokenLineEdit.text())
+            self.saveSetting("mondayURL", self.mondayURLLineEdit.text())
+            self.saveSetting("mondayAPIToken", self.mondayTokenLineEdit.text())
+            self.saveSetting("clickupAPIToken", self.clickupTokenLineEdit.text())
 
             self.browserLabel.setText("Browser: " + self.loadSetting("defaultBrowser", "Chrome"))
 

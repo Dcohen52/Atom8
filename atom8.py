@@ -216,6 +216,10 @@ class Atom8(QMainWindow):
             border: 1px solid #ddd;
             padding: 6px;
             border-radius: 4px;
+            background-color: #fafafa;
+        }
+        
+        QLineEdit:diabled {
             background-color: #eee;
         }
 
@@ -883,33 +887,32 @@ class Atom8(QMainWindow):
         def __init__(self, parent=None):
             try:
                 super().__init__(parent)
-                self.setWindowTitle(f"Results for {parent.testName.text()}")
+                self.setWindowTitle(
+                    f"Results for {parent.testName.text() if parent.testName.text() else 'Unnamed Test'}")
                 self.setGeometry(100, 100, 600, 600)
 
-                self.testNameLabel = QLabel(parent.testName.text(), self)
+                self.testNameLabel = QLabel(parent.testName.text() if parent.testName.text() else "Unnamed Test", self)
                 self.testNameLabel.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
                 self.testNameLabel.setMaximumWidth(550)
 
-                self.testDescriptionLabel = QLabel(parent.testDescription.text(), self)
+                self.testDescriptionLabel = QLabel(
+                    parent.testDescription.text() if parent.testDescription.text() else "No description provided.",
+                    self)
                 self.testDescriptionLabel.setStyleSheet("font-size: 12px; margin-bottom: 10px;")
                 self.testDescriptionLabel.setWordWrap(True)
                 self.testDescriptionLabel.setMaximumWidth(550)
 
-                if any(checkbox.isChecked() for checkbox in self.findChildren(QCheckBox)):
-                    self.browserOptionsLabel = QLabel(
-                        f"Performed on {parent.browserLabel.text()}, with the following options:",
-                        self)
+                if any(checkbox.isChecked() for checkbox in parent.findChildren(QCheckBox)):
+                    self.browserOptionsLabel = QLabel("Performed on Chrome, with the following options:", self)
                     self.browserOptionsLabel.setWordWrap(True)
                     self.browserOptionsLabel.setMaximumWidth(550)
-
                     for checkbox in parent.findChildren(QCheckBox):
                         if checkbox.isChecked():
                             if checkbox.text() == "Generate Report":
                                 continue
                             self.browserOptionsLabel.setText(f"{self.browserOptionsLabel.text()}\n - {checkbox.text()}")
                         else:
-                            self.browserOptionsLabel.setText(
-                                f"{self.browserOptionsLabel.text()}\n\nNo options selected.\n")
+                            continue
                 else:
                     self.browserOptionsLabel = QLabel("Performed on Chrome, with no options selected.", self)
                     self.browserOptionsLabel.setWordWrap(True)
@@ -1375,6 +1378,8 @@ class Atom8(QMainWindow):
             <p><strong>Preferences:</strong> You can change the preferences in the preferences menu.</p>
             <p><strong>Run:</strong> You can run the script by clicking the run button.</p>
             <p><strong>Log Viewer:</strong> You can view the logs in the log viewer tab.</p>
+            <hr>
+            <p>For full documentation, information about available options and usage - visit the <a href="https://github.com/Dcohen52/Atom8" target="_blank">Atom8 GitHub Repository</a>.</p>
         </body>
         </html>
         """)

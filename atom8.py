@@ -158,7 +158,7 @@ class Atom8(QMainWindow):
     def __init__(self):
         super().__init__()
         self.splash = QSplashScreen(QPixmap("_internal/assets/splash.png"))
-        splash_message = f"Loading Atom8...\nVersion: v{__version__}"
+        splash_message = f"Loading Atom8...\nVersion: v{__version__} build {__build__}-dev"
         self.splash.showMessage(splash_message, Qt.AlignLeft | Qt.AlignBottom, Qt.white)
 
         self.splash.show()
@@ -396,8 +396,7 @@ class Atom8(QMainWindow):
             cursor: pointer;
         }
         """
-
-        self.setWindowTitle('Atom8')
+        self.setWindowTitle(f"Atom8 v{__version__}")
         self.setGeometry(100, 100, 800, 800)
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
@@ -1306,7 +1305,7 @@ class Atom8(QMainWindow):
         <html>
         <head>
             <style> 
-                p { font-family: Arial, sans-serif; line-height: 1.6; }
+                p { font-family: Arial, sans-serif; line-height: 1.0; }
                 a { text-decoration: none; color: #007BFF; }
                 a:hover { text-decoration: underline; }
             </style>
@@ -1332,7 +1331,7 @@ class Atom8(QMainWindow):
         <html>
         <head>
             <style>
-                p { font-family: Arial, sans-serif; line-height: 1.6; }
+                p { font-family: Arial, sans-serif; line-height: 1.0; }
                 a { text-decoration: none; color: #007BFF; }
                 a:hover { text-decoration: underline; }
             </style>
@@ -1357,7 +1356,7 @@ class Atom8(QMainWindow):
         <html>
         <head>
             <style>
-                p { font-family: Arial, sans-serif; line-height: 1.6; }
+                p { font-family: Arial, sans-serif; line-height: 1.0; }
                 a { text-decoration: none; color: #007BFF; }
                 a:hover { text-decoration: underline; }
             </style>
@@ -1365,19 +1364,18 @@ class Atom8(QMainWindow):
         <body>
             <h2>How to use</h2>
             <p><strong>Build Script:</strong> You can build the script by adding steps to the steps list.</p>
-            <p><strong>Add Step:</strong> You can add a step by selecting the action, filling the fields and clicking the add step button.</p>
-            <p><strong>Remove Step:</strong> You can remove a step by selecting the step and clicking the remove step button.</p>
-            <p><strong>Edit Step:</strong> You can edit a step by selecting the step and clicking the edit step button.</p>
-            <p><strong>Save Script:</strong> You can save the script by clicking the save button.</p>
-            <p><strong>Open Existing Script:</strong> You can open the script by clicking the open button.</p>
-            <hr>
-            <p><strong>Preferred Browser:</strong> You can choose the browser you want to use in the preferences menu.</p>
-            <p><strong>Save Path:</strong> You can choose the default save path for the screenshots in the preferences menu.</p>
-            <p><strong>Save Logs:</strong> You can save the logs in the log viewer tab.</p>
-            <p><strong>Clear Logs:</strong> You can clear the logs in the log viewer tab.</p>
-            <p><strong>Preferences:</strong> You can change the preferences in the preferences menu.</p>
-            <p><strong>Run:</strong> You can run the script by clicking the run button.</p>
-            <p><strong>Log Viewer:</strong> You can view the logs in the log viewer tab.</p>
+            <p><strong>Run Script:</strong> Click the Run button to start the automation process.</p>
+            <p><strong>Sequencer:</strong> You can execute multiple atm8 files in sequence by adding them to the sequencer.</p>
+            <h3>Steps</h3>
+            <p><strong>Navigate to URL:</strong> Navigate to a specific URL.</p>
+            <p><strong>Click Element:</strong> Click on an element on the page.</p>
+            <p><strong>Input Text:</strong> Input text into an element on the page.</p>
+            <p><strong>Take Screenshot:</strong> Take a screenshot of the current page.</p>
+            <p><strong>Execute JavaScript:</strong> Execute JavaScript code on the page.</p>
+            <p><strong>Execute Python Script:</strong> Execute a Python script.</p>
+            <p><strong>Sleep:</strong> Pause the script for a specified amount of time.</p>
+            <p><strong>Maximize Window:</strong> Maximize the browser window.</p>
+            <p><strong>Compare Images:</strong> Compare two images.</p>
             <hr>
             <p>For full documentation, information about available options and usage - visit the <a href="https://github.com/Dcohen52/Atom8" target="_blank">Atom8 GitHub Repository</a>.</p>
         </body>
@@ -1480,6 +1478,7 @@ class Atom8(QMainWindow):
         self.clearLogs()
         # clear the saved file path
         self.currentFilePath = None
+
     def prefs(self):
         try:
             self.prefsWindow = QDialog(self, Qt.Window)
@@ -1772,7 +1771,8 @@ class Atom8(QMainWindow):
 
             if any(checkbox.isChecked() for checkbox in self.findChildren(QCheckBox)):
                 bugReport += "- [x] "
-                bugReport += "\n- [x] ".join([checkbox.text() for checkbox in self.findChildren(QCheckBox) if checkbox.isChecked()])
+                bugReport += "\n- [x] ".join(
+                    [checkbox.text() for checkbox in self.findChildren(QCheckBox) if checkbox.isChecked()])
                 bugReport += "\n"
             else:
                 bugReport += "- [x] None\n"

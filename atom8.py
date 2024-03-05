@@ -23,7 +23,7 @@ import platform
 import cv2
 
 __version__ = "0.0.3"
-__build__ = "04032024-1"
+__build__ = f"{datetime.now().strftime('%Y%m%d')}"
 
 
 class CustomComboBox(QComboBox):
@@ -536,7 +536,7 @@ class Atom8(QMainWindow):
             fileMenu.addAction(saveAction)
 
             clearAction = QAction('Clear All', self)
-            clearAction.triggered.connect(self.clearStepsList)
+            clearAction.triggered.connect(self.clearAllFields)
             clearAction.setShortcut('Ctrl+N')
             fileMenu.addAction(clearAction)
 
@@ -1472,6 +1472,14 @@ class Atom8(QMainWindow):
         self.clearInputFields()
         self.clearLogs()
 
+    def clearAllFields(self):
+        self.testName.clear()
+        self.testDescription.clear()
+        self.clearStepsList()
+        self.clearInputFields()
+        self.clearLogs()
+        # clear the saved file path
+        self.currentFilePath = None
     def prefs(self):
         try:
             self.prefsWindow = QDialog(self, Qt.Window)
@@ -1762,13 +1770,10 @@ class Atom8(QMainWindow):
 
             bugReport += "**Performed with the following options:**\n"
 
-            if any(checkbox.isChecked() for checkbox in
-                   self.findChildren(QCheckBox)) and not self.generateReport.isChecked():
-                for checkbox in self.findChildren(QCheckBox):
-                    if checkbox.isChecked():
-                        if "Generate Report" in checkbox.text():
-                            continue
-                        bugReport += f"- [x] {checkbox.text()}\n"
+            if any(checkbox.isChecked() for checkbox in self.findChildren(QCheckBox)):
+                bugReport += "- [x] "
+                bugReport += "\n- [x] ".join([checkbox.text() for checkbox in self.findChildren(QCheckBox) if checkbox.isChecked()])
+                bugReport += "\n"
             else:
                 bugReport += "- [x] None\n"
 

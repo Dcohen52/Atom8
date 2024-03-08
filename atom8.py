@@ -21,9 +21,16 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from helper import extract_elements_to_json
 import platform
 import cv2
+import pywinauto
 
 __version__ = "0.0.3"
-__build__ = f"{datetime.now().strftime('%Y%m%d')}"
+__build__ = f"07032024-2"
+
+
+class Importer:
+    def __init__(self, parent):
+        self.parent = parent
+        pwa = pywinauto.application.Application()
 
 
 class CustomComboBox(QComboBox):
@@ -178,7 +185,9 @@ class Atom8(QMainWindow):
         self.resultsTable = None
         self.setupScriptEditor()
         self.results = []
-        self.loadWhenDone = False
+        self.outputFileName = None
+        self.logger.info("Atom8 initialized.")
+        self.openPhotoState = False
 
     def initUI(self):
 
@@ -621,8 +630,9 @@ class Atom8(QMainWindow):
                 test_img_path = self.testImgPath.text()
                 output_path = self.outputPath.text()
                 step = (action, ref_img_path, test_img_path, output_path)
-                display_txt = f'Compare images: Reference: {ref_img_path}, Test: {test_img_path}, Output: {output_path}'
+                display_txt = f'Comparing images: {ref_img_path} and {test_img_path}.'
                 self.logger.info(f"Added step: {display_txt}")
+                self.openPhotoState = self.openPhoto.isChecked()
             else:
                 QMessageBox.warning(self, "Invalid Action", "The selected action is not supported.")
                 return
@@ -633,6 +643,10 @@ class Atom8(QMainWindow):
             self.inputText.clear()
             self.sleepInput.clear()
             self.inputDescription.clear()
+            self.refImgPath.clear()
+            self.testImgPath.clear()
+            self.outputPath.clear()
+            self.openPhoto.setChecked(False)
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Error while adding step: {e}")
 
@@ -858,7 +872,7 @@ class Atom8(QMainWindow):
                            'Take Screenshot'])
             self.sleepInput.setVisible(action == 'Sleep')
             self.inputDescription.setVisible(
-                action in ['Click Element', 'Input Text', 'Sleep', 'Navigate to URL', 'Execute Python Script',
+                action in ['Click Element', 'Input Text', 'Navigate to URL', 'Execute Python Script',
                            'Execute JavaScript'])
             self.refImgPath.setVisible(action == 'Compare Images')
             self.testImgPath.setVisible(action == 'Compare Images')
@@ -1150,8 +1164,10 @@ class Atom8(QMainWindow):
                         if action == 'Navigate to URL':
                             try:
                                 self.driver.get(step[1])
+                                self.results.append((step, 'Passed'))
                             except Exception as e:
                                 self.logger.error(f"Error while navigating to URL: {e}")
+                                self.results.append((step, 'Failed'))
                         elif action in ['Click Element', 'Input Text']:
                             try:
                                 locator_type = step[1]
@@ -1159,11 +1175,14 @@ class Atom8(QMainWindow):
                                 element = self.driver.find_element(locator_strategies[locator_type], locator_value)
                                 if action == 'Click Element':
                                     element.click()
+                                    self.results.append((step, 'Passed'))
                                 else:
                                     element.send_keys(step[3])
+                                    self.results.append((step, 'Passed'))
                                 self.logger.info(f"{action} at {locator_type}: {locator_value}")
                             except Exception as e:
                                 self.logger.error(f"Error while performing {action}: {e}")
+                                self.results.append((step, 'Failed'))
                         elif action == 'Take Screenshot':
                             try:
                                 with open(self.settingsFilePath(), "r") as settings_file:
@@ -1174,50 +1193,57 @@ class Atom8(QMainWindow):
                                     screenshot_filename = os.path.join(screenshot_folder, step[1])
                                     self.driver.save_screenshot(screenshot_filename)
                                     self.logger.info(f"Screenshot saved as {screenshot_filename}")
+                                self.results.append((step, 'Passed'))
                             except Exception as e:
                                 self.logger.error(f"Error while taking screenshot: {e}")
+                                self.results.append((step, 'Failed'))
                         elif action == 'Execute JavaScript':
                             try:
                                 self.driver.execute_script(step[1])
                                 self.logger.info(f"Executed JavaScript: {step[1]}")
+                                self.results.append((step, 'Passed'))
                             except Exception as e:
                                 self.logger.error(f"Error in JavaScript: {e}")
+                                self.results.append((step, 'Failed'))
                         elif action == 'Sleep':
                             try:
                                 time.sleep(float(step[1]))
                                 self.logger.info(f"Slept for {step[1]} seconds.")
+                                self.results.append((step, 'Passed'))
                             except Exception as e:
                                 self.logger.error(f"Error while sleeping: {e}")
+                                self.results.append((step, 'Failed'))
                         elif action == 'Maximize Window':
                             try:
                                 self.driver.maximize_window()
                                 self.logger.info("Maximized window.")
+                                self.results.append((step, 'Passed'))
                             except Exception as e:
                                 self.logger.error(f"Error while maximizing window: {e}")
+                                self.results.append((step, 'Failed'))
                         elif action == 'Execute Python Script':
                             try:
                                 exec(open(step[1]).read())
                                 self.logger.info(f"Executed Python script: {step[1]}")
+                                self.results.append((step, 'Passed'))
                             except Exception as e:
                                 self.logger.error(f"Error in Python script: {e}")
+                                self.results.append((step, 'Failed'))
                         elif action == 'Compare Images':
                             try:
-                                self.logger.info(f"Comparing images: {step[1]} and {step[2]}")
+                                self.logger.info(f"Comparing images: {step[1]} and {step[2]}.")
                                 if self.compareImages(step[1], step[2], step[3]):
-                                    self.results.append((step, 'Passed'))
                                     if self.openPhoto.isChecked():
-                                        os.startfile(step[3])
-                                else:
-                                    self.results.append((step, 'Failed'))
+                                        self.logger.info(f"Opening photo: {step[3]}")
+                                        self.openPhotoState = True
+                                        os.startfile(self.outputFileName)
+                                self.results.append((step, 'Passed'))
                             except Exception as e:
                                 self.logger.error(f"Error in {action}: {e}")
                                 self.results.append((step, 'Failed'))
 
-                        self.results.append((step, 'Passed'))
-
                     except Exception as e:
                         self.logger.error(f"Error in {action}: {e}")
-                        self.results.append((step, 'Failed'))
 
                 self.driver.quit()
 
@@ -1259,7 +1285,7 @@ class Atom8(QMainWindow):
             elif action == 'Maximize Window':
                 return 'Maximize Window'
             elif action == 'Compare Images':
-                return f'Comparing images: {step[1]} and {step[2]}'
+                return f'Comparing images: {step[1]} and {step[2]}.'
             else:
                 return 'Unknown Action'
         except Exception as e:
@@ -1457,7 +1483,7 @@ class Atom8(QMainWindow):
             elif action == 'Take Screenshot':
                 display_text = f'Take screenshot and save as {step[1]}'
             elif action == 'Compare Images':
-                display_text = f'Comparing images: {step[1]} and {step[2]}'
+                display_text = f'Comparing images: {step[1]} and {step[2]}.'
             else:
                 display_text = f'{action}'
         except Exception as e:
@@ -1476,6 +1502,10 @@ class Atom8(QMainWindow):
         self.clearStepsList()
         self.clearInputFields()
         self.clearLogs()
+        self.outputPath.clear()
+        self.refImgPath.clear()
+        self.testImgPath.clear()
+
         # clear the saved file path
         self.currentFilePath = None
 
@@ -1989,7 +2019,7 @@ class Atom8(QMainWindow):
                                'Take Screenshot'])
                 self.sleepInput.setVisible(action == 'Sleep')
                 self.inputDescription.setVisible(
-                    action in ['Click Element', 'Input Text', 'Sleep', 'Navigate to URL', 'Execute Python Script',
+                    action in ['Click Element', 'Input Text', 'Navigate to URL', 'Execute Python Script',
                                'Execute JavaScript'])
 
                 if action == 'Navigate to URL':
@@ -2011,14 +2041,12 @@ class Atom8(QMainWindow):
                     self.inputText.setPlaceholderText("Enter Screenshot Name")
                     self.inputText.setText(step[1])
                 elif action == 'Compare Images':
-                    self.refImgPath.setVisible(True)
                     self.refImgPath.setText(step[1])
-                    self.compImgPath.setVisible(True)
-                    self.compImgPath.setText(step[2])
-                    self.inputText.setVisible(False)
-                    self.sleepInput.setVisible(False)
-                    self.locatorSelection.setVisible(False)
-                    self.locatorInput.setVisible(False)
+                    self.testImgPath.setText(step[2])
+                    self.outputPath.setText(step[3])
+                elif action == 'Maximize Window':
+                    self.inputText.setPlaceholderText("Maximize Window.")
+                    self.inputText.setText("")
                 else:
                     self.inputText.setPlaceholderText("Enter Text")
                     self.inputText.setText(step[1])
@@ -2044,21 +2072,24 @@ class Atom8(QMainWindow):
                 if action == 'Sleep':
                     step = (action, sleep_value)
                     display_txt = f'Sleep for {sleep_value} seconds.'
-                elif action in ['Click Element', 'Input Text']:
+                elif action in ['Click Element']:
                     step = (action, locator_type, locator_value, text_value, description_value)
-                    display_txt = f'{action}: {locator_value if locator_value else text_value} (Locator: {locator_type if locator_type != "Select Locator" else "N/A"}), Description: {description_value}'
+                    display_txt = f'{action}: (By: {step[1]}, {step[2]}), Description: {description_value if description_value else "None"}'
+                elif action in ['Input Text']:
+                    step = (action, locator_type, locator_value, text_value, description_value)
+                    display_txt = f'{action}: (By: {step[1]}, {step[2]}), Text: {text_value}, Description: {description_value if description_value else "None"}'
                 elif action in ['Navigate to URL', 'Execute JavaScript', 'Execute Python Script']:
                     step = (action, text_value, description_value)
                     display_txt = f'{action}: {text_value}{"." if not description_value else f", Description: {description_value}"}'
                 elif action == 'Take Screenshot':
-                    step = (action, text_value, description_value)
-                    display_txt = f'Take screenshot and save as {text_value}{".png" if not text_value.endswith(".png") else ""}{"." if not description_value else f", Description: {description_value}"}'
+                    step = (action, text_value)
+                    display_txt = f'Take screenshot and save as {text_value}.'
                 elif action == 'Maximize Window':
-                    step = action
-                    display_txt = f'Maximize Window.'
+                    step = (action,)
+                    display_txt = f'Maximize Window'
                 elif action == 'Compare Images':
-                    step = (action, self.refImgPath.text(), self.compImgPath.text())
-                    display_txt = f'Comparing images: {self.refImgPath.text()} and {self.compImgPath.text()}'
+                    step = (action, self.refImgPath.text(), self.testImgPath.text(), self.outputPath.text())
+                    display_txt = f'Comparing images: {step[1]} and {step[2]}.'
                 else:
                     QMessageBox.warning(self, "Invalid Action", "The selected action is not supported.")
                     return
@@ -2129,7 +2160,7 @@ class Atom8(QMainWindow):
             self.sleepInput.setText('')
             self.inputDescription.setText('')
             self.refImgPath.setText('')
-            self.compImgPath.setText('')
+
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Error while clearing input fields: {e}")
 
@@ -2347,38 +2378,43 @@ class Atom8(QMainWindow):
             QMessageBox.warning(self, "Error", f"Error while saving sequence: {e}")
 
     def compareImages(self, reference_path, test_path, output_path):
-        self.driver.save_screenshot(test_path)
-
-        reference = cv2.imread(reference_path)
         with open(self.settingsFilePath(), "r") as settings_file:
             settings = json.load(settings_file)
-            screenshot_folder = settings.get("savePath")
+            screenshot_folder = f"{settings['savePath']}/{self.testName.text()}"
             if not os.path.isdir(screenshot_folder):
                 os.makedirs(screenshot_folder)
-            screenshot_filename = os.path.join(screenshot_folder, test_path)
-            self.driver.save_screenshot(screenshot_filename)
-            self.logger.info(f"[Compare Images] -> Screenshot saved as {screenshot_filename}")
 
-            test = cv2.imread(screenshot_filename)
+            test_filename = os.path.join(screenshot_folder,
+                                         f"{os.path.basename(test_path)}_{datetime.now().strftime('%Y.%m.%d %H-%M-%S')}.png" if not test_path.endswith(
+                                             ".png") else os.path.basename(test_path))
+            self.driver.save_screenshot(test_filename)
+            self.logger.info(f"[Compare Images] -> Test screenshot saved as {test_filename}")
 
-        difference = cv2.absdiff(reference, test)
-        gray = cv2.cvtColor(difference, cv2.COLOR_BGR2GRAY)
+            reference = cv2.imread(reference_path)
+            test = cv2.imread(test_filename)
 
-        _, thresh = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            difference = cv2.absdiff(reference, test)
+            gray = cv2.cvtColor(difference, cv2.COLOR_BGR2GRAY)
 
-        overlay = test.copy()
-        overlay[:] = (0, 0, 0)
+            _, thresh = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
+            contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        cv2.addWeighted(overlay, 0.5, test, 0.5, 0, test)
+            overlay = test.copy()
+            overlay[:] = (0, 0, 0)
+            cv2.addWeighted(overlay, 0.5, test, 0.5, 0, test)
 
-        for contour in contours:
-            x, y, w, h = cv2.boundingRect(contour)
-            cv2.rectangle(test, (x, y), (x + w, y + h), (0, 255, 0), 1)
+            for contour in contours:
+                x, y, w, h = cv2.boundingRect(contour)
+                cv2.rectangle(test, (x, y), (x + w, y + h), (0, 255, 0), 1)
 
-        cv2.imwrite(output_path, test)
+            output_filename = os.path.join(screenshot_folder,
+                                           f"{os.path.basename(output_path)}_{datetime.now().strftime('%Y.%m.%d %H-%M-%S')}.png" if not output_path.endswith(
+                                               ".png") else os.path.basename(output_path))
+            cv2.imwrite(output_filename, test)
+            self.outputFileName = output_filename
+            self.logger.info(f"[Compare Images] -> Output image saved as {output_filename}")
 
-        return output_path
+            return output_filename
 
     def showExtractionResult(self, elements_data):
         try:
